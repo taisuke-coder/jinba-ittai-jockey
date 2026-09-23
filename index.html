@@ -1,0 +1,1915 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>人馬一体ジョッキー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* 単一の世界観（夜の競馬場の掲示板）で統一したダークテーマ */
+:root{
+  color-scheme: dark;
+  --turf:#0b2a1f; --board:#070b09; --panel:rgba(6,14,10,.8); --panel-solid:#0c1712;
+  --line:rgba(170,210,185,.16); --line-strong:rgba(170,210,185,.34);
+  --ink:#eef4ef; --muted:#9db4a6; --dim:#6a8275;
+  --led:#ffb21e; --led-glow:rgba(255,178,30,.42); --go:#52d47e; --warn:#ffcf3a; --bad:#ff5c3d; --calm:#72c8ff;
+  --w1:#f7f7f2; --w2:#1d1d1d; --w3:#e0261c; --w4:#1d63c9; --w5:#f2cf00; --w6:#1d9a4a; --w7:#f08b00; --w8:#ef6aa8;
+  --f-disp:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+  --f-led:"DotGothic16","Osaka-Mono","MS Gothic",ui-monospace,monospace;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--board);color:var(--ink);font-family:var(--f-body);-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+button{font-family:inherit;color:inherit}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--led);outline-offset:2px}
+#app{position:fixed;inset:0;overflow:hidden;background:var(--turf)}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* ---------- メニュー ---------- */
+.screen{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#menu{background:linear-gradient(180deg,rgba(5,12,9,.55) 0%,rgba(5,12,9,.86) 38%,rgba(5,12,9,.95) 100%)}
+.menu-wrap{max-width:1180px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top,0px)) 20px calc(40px + env(safe-area-inset-bottom,0px))}
+.mast{display:grid;grid-template-columns:auto 1fr;gap:4px 28px;align-items:end;margin-bottom:26px}
+.mast h1{font-family:var(--f-disp);font-weight:400;font-size:clamp(56px,11vw,120px);line-height:.9;margin:0;letter-spacing:.02em;
+  color:var(--ink);text-shadow:0 0 1px #000,0 6px 30px rgba(0,0,0,.6)}
+.mast h1 em{font-style:normal;color:var(--led)}
+.mast-side{padding-bottom:10px}
+.kicker{font-family:var(--f-led);color:var(--led);letter-spacing:.18em;font-size:13px;text-shadow:0 0 10px var(--led-glow)}
+.lede{margin:8px 0 0;max-width:46ch;color:var(--muted);line-height:1.75;font-size:15px}
+@media (max-width:720px){.mast{grid-template-columns:1fr}.mast-side{padding-bottom:0}}
+
+.menu-grid{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:900px){.menu-grid{grid-template-columns:minmax(0,1fr)}}
+.blk h2{font-family:var(--f-disp);font-weight:400;font-size:18px;margin:0 0 12px;display:flex;align-items:center;gap:10px;letter-spacing:.04em}
+.blk h2 small{font-family:var(--f-body);font-size:12px;color:var(--dim);letter-spacing:.1em}
+.step{display:inline-grid;place-items:center;width:26px;height:26px;border:1.5px solid var(--led);color:var(--led);font-family:var(--f-led);font-size:15px;border-radius:50%}
+.col-left{display:flex;flex-direction:column;gap:26px}
+
+.course-list{display:flex;flex-direction:column;gap:8px}
+.course{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:78px 1fr;gap:2px 12px;padding:12px 14px;border:1px solid var(--line);background:rgba(10,24,17,.7);border-radius:6px;transition:border-color .15s,background .15s}
+.course:hover{border-color:var(--line-strong)}
+.course:focus-visible{outline:2px solid var(--led);outline-offset:2px}
+.course[aria-pressed="true"]{border-color:var(--led);background:rgba(255,178,30,.08);box-shadow:inset 3px 0 0 var(--led)}
+.course .dist{grid-row:span 2;font-family:var(--f-led);font-size:28px;line-height:1;color:var(--led);text-shadow:0 0 12px var(--led-glow);align-self:center}
+.course .dist small{display:block;font-size:11px;color:var(--muted);text-shadow:none;margin-top:4px;letter-spacing:.1em}
+.course .cname{font-weight:700;font-size:15px}
+.course .cname .g{font-family:var(--f-led);font-size:11px;color:var(--board);background:var(--led);padding:1px 5px;border-radius:2px;margin-left:6px;vertical-align:2px}
+.course .cnote{font-size:12px;color:var(--muted);line-height:1.5}
+
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.seg-label{font-size:12px;color:var(--dim);letter-spacing:.12em;margin:0 0 6px}
+.seg button{flex:1 1 auto;min-width:0;background:rgba(10,24,17,.7);border:1px solid var(--line);padding:9px 10px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:500}
+.seg button[aria-pressed="true"]{border-color:var(--led);color:var(--led);background:rgba(255,178,30,.08)}
+.seg button small{display:block;font-size:10.5px;color:var(--dim);font-weight:400}
+
+.go{width:100%;cursor:pointer;border:0;border-radius:6px;padding:16px 18px;background:var(--led);color:#1a1000;font-family:var(--f-disp);font-size:20px;letter-spacing:.06em;
+  box-shadow:0 0 0 1px rgba(255,255,255,.2) inset,0 10px 30px rgba(255,178,30,.25);transition:transform .12s}
+.go:hover{transform:translateY(-1px)}
+.go:active{transform:translateY(1px)}
+.go small{display:block;font-family:var(--f-body);font-size:11.5px;letter-spacing:.08em;opacity:.75;margin-top:2px}
+
+/* 出馬表 */
+.horse-list{display:flex;flex-direction:column;gap:8px}
+.hrow{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:10px 1fr;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:rgba(10,24,17,.72);transition:border-color .15s}
+.hrow:hover{border-color:var(--line-strong)}
+.hrow:focus-visible{outline:2px solid var(--led);outline-offset:2px}
+.hrow[aria-pressed="true"]{border-color:var(--led);background:rgba(255,178,30,.06)}
+.hrow .stripe{background:var(--c)}
+.hrow .in{padding:12px 14px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:8px 18px}
+@media (max-width:640px){.hrow .in{grid-template-columns:1fr}}
+.hname{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.coat{width:22px;height:22px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px rgba(255,255,255,.12)}
+.hname b{font-family:var(--f-disp);font-weight:400;font-size:21px;letter-spacing:.02em}
+.chip{font-size:11.5px;padding:2px 8px;border-radius:3px;border:1px solid var(--line-strong);color:var(--ink);white-space:nowrap}
+.chip.st{background:rgba(114,200,255,.12);border-color:rgba(114,200,255,.4)}
+.chip.tp{background:rgba(255,92,61,.12);border-color:rgba(255,92,61,.4)}
+.mark{font-family:var(--f-disp);font-size:18px;color:var(--led);margin-left:auto}
+.comment{font-size:12.5px;color:var(--muted);line-height:1.6;margin:6px 0 0}
+.comment::before{content:"厩舎コメント";display:inline-block;font-size:10.5px;color:var(--dim);border:1px solid var(--line);padding:0 5px;margin-right:6px;border-radius:2px;letter-spacing:.08em}
+.stats{display:grid;grid-template-columns:auto 1fr auto;gap:4px 8px;align-items:center;font-size:11.5px;color:var(--muted)}
+.stats .bar{height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden}
+.stats .bar i{display:block;height:100%;background:linear-gradient(90deg,#3f8f63,var(--go))}
+.stats .gr{font-family:var(--f-led);color:var(--ink);font-size:14px;width:1.2em;text-align:center}
+.apt{grid-column:1/-1;margin-top:4px}
+.apt-track{position:relative;height:16px;border-top:1px solid var(--line);margin-top:6px}
+.apt-range{position:absolute;top:4px;height:6px;background:rgba(82,212,126,.55);border-radius:3px}
+.apt-now{position:absolute;top:0;width:2px;height:14px;background:var(--led);box-shadow:0 0 6px var(--led)}
+.apt-lab{display:flex;justify-content:space-between;font-family:var(--f-led);font-size:10px;color:var(--dim)}
+.rec{font-size:11px;color:var(--led);font-family:var(--f-led);margin-top:4px;min-height:1em}
+
+.howto{border:1px solid var(--line);border-radius:6px;padding:14px 16px;background:rgba(10,24,17,.6)}
+.howto h3{margin:0 0 10px;font-size:13px;letter-spacing:.14em;color:var(--dim);font-weight:500}
+.keys-grid{display:grid;grid-template-columns:auto 1fr;gap:7px 12px;font-size:13px;align-items:center}
+kbd{font-family:var(--f-led);font-size:12px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;padding:1px 6px;background:rgba(255,255,255,.04);white-space:nowrap}
+.tips{margin:12px 0 0;padding:0;list-style:none;font-size:12.5px;color:var(--muted);line-height:1.65;display:flex;flex-direction:column;gap:6px}
+.tips li::before{content:"—";color:var(--led);margin-right:6px}
+
+/* ---------- HUD ---------- */
+#hud{position:absolute;inset:0;pointer-events:none;font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.led{font-family:var(--f-led);color:var(--led);text-shadow:0 0 10px var(--led-glow);font-variant-numeric:tabular-nums}
+.hud-top{position:absolute;left:0;right:0;top:0;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 0;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:start}
+.raceinfo{padding:8px 12px;justify-self:start;max-width:260px}
+.ri-name{font-family:var(--f-disp);font-size:15px;letter-spacing:.03em}
+.ri-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+.ri-time{font-size:22px;margin-top:4px}
+.center{display:flex;flex-direction:column;align-items:center;gap:6px}
+.bigline{display:flex;align-items:baseline;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 16px 6px}
+.bigline .lab{font-size:11px;color:var(--muted);letter-spacing:.14em}
+#hRemain{font-size:40px;line-height:1}
+.unit{font-family:var(--f-led);color:var(--led);font-size:16px}
+#hRank{font-family:var(--f-disp);font-size:32px;line-height:1;color:var(--ink)}
+#hRank small{font-family:var(--f-body);font-size:12px;color:var(--muted);margin-left:2px}
+#ticker{min-height:26px;font-size:14px;font-weight:700;text-align:center;padding:3px 14px;border-radius:4px;background:rgba(0,0,0,.45);max-width:min(560px,86vw);transition:opacity .3s}
+#ticker:empty{opacity:0}
+#minimap{justify-self:end;width:220px;height:120px}
+#alert{position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);font-family:var(--f-disp);font-size:clamp(34px,7vw,72px);letter-spacing:.04em;text-align:center;
+  color:var(--ink);text-shadow:0 4px 24px rgba(0,0,0,.7),0 0 2px #000;opacity:0;transition:opacity .25s,transform .25s;white-space:nowrap}
+#alert.show{opacity:1;transform:translate(-50%,-56%)}
+#alert small{display:block;font-family:var(--f-body);font-weight:700;font-size:16px;letter-spacing:.06em;margin-top:6px}
+#alert.good{color:var(--go)} #alert.bad{color:var(--bad)} #alert.led{color:var(--led)}
+
+#gatecard{position:absolute;left:50%;top:50%;transform:translate(-50%,-40%);width:min(460px,calc(100vw - 32px));padding:16px 18px;pointer-events:none}
+#gatecard h3{margin:0;font-family:var(--f-disp);font-weight:400;font-size:22px}
+#gatecard .gc-meta{color:var(--muted);font-size:12.5px;margin:4px 0 10px}
+#gatecard .gc-plan{font-size:13.5px;line-height:1.7}
+#gatecard .gc-plan b{color:var(--led)}
+#gatecard .gc-cue{margin-top:12px;font-family:var(--f-led);color:var(--led);font-size:14px;text-align:center;border-top:1px solid var(--line);padding-top:10px}
+
+.hud-bottom{position:absolute;left:0;right:0;bottom:0;padding:0 16px calc(14px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:minmax(0,290px) minmax(0,1fr) minmax(0,220px);gap:12px;align-items:end}
+.horsepanel{padding:10px 12px}
+.hp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hp-head b{font-family:var(--f-disp);font-weight:400;font-size:16px}
+.hp-bars{display:grid;grid-template-columns:auto 1fr 34px;gap:5px 8px;align-items:center;margin-top:8px;font-size:11.5px;color:var(--muted)}
+.hp-bars .bar{height:8px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.hp-bars .bar i{display:block;height:100%;width:50%;transition:width .12s linear}
+.hp-bars .num{font-family:var(--f-led);color:var(--ink);text-align:right;font-size:12px}
+#bSta i{background:var(--go)} #bTame i{background:var(--led)} #bMood i{background:var(--calm)} #bAgit i{background:var(--bad)}
+#feel{margin-top:9px;padding:7px 9px;border-radius:4px;font-size:13px;font-weight:700;line-height:1.4;border-left:3px solid var(--go);background:rgba(82,212,126,.1)}
+#feel.warn{border-color:var(--warn);background:rgba(255,207,58,.1)}
+#feel.bad{border-color:var(--bad);background:rgba(255,92,61,.14)}
+#feel .ear{font-weight:400;color:var(--muted);font-size:11px;display:block;margin-top:2px}
+
+.reinpanel{padding:10px 14px;justify-self:center;width:min(520px,100%)}
+#form{position:relative;height:26px;margin:2px 10px 10px;border-bottom:1px dashed var(--line-strong)}
+#form .fc{position:absolute;bottom:3px;width:20px;height:20px;margin-left:-10px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-led);font-size:11px;box-shadow:0 0 0 1px rgba(0,0,0,.6);transition:left .15s linear}
+#form .fc.me{width:24px;height:24px;margin-left:-12px;box-shadow:0 0 0 2px var(--led),0 0 10px var(--led-glow);z-index:2}
+.form-lab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);letter-spacing:.1em;margin:-6px 0 6px}
+.rein-row{display:flex;align-items:center;gap:10px}
+.rein-row .lab{font-size:11px;color:var(--muted);white-space:nowrap}
+#rein{position:relative;flex:1;height:14px;border-radius:7px;background:linear-gradient(90deg,#2f6f8f 0%,#2f6f8f 35%,#3f7f55 35%,#3f7f55 62%,#8f6f1f 62%,#8f6f1f 80%,#9f3a22 80%)}
+#rein .z{position:absolute;top:16px;font-size:10px;color:var(--dim);transform:translateX(-50%);white-space:nowrap}
+#reinMark{position:absolute;top:-4px;width:6px;height:22px;margin-left:-3px;background:var(--ink);border-radius:3px;box-shadow:0 0 0 2px rgba(0,0,0,.6);transition:left .08s linear}
+#reinEff{position:absolute;top:-7px;width:0;height:0;margin-left:-6px;border:6px solid transparent;border-top-color:var(--bad);display:none}
+.rein-meta{display:flex;justify-content:space-between;align-items:center;margin-top:20px;gap:10px}
+#whips{display:flex;gap:4px;align-items:center}
+#whips i{width:5px;height:18px;border-radius:2px;background:var(--led);box-shadow:0 0 6px var(--led-glow)}
+#whips i.used{background:rgba(255,255,255,.12);box-shadow:none}
+#hSpeed{font-size:18px}
+
+.keyhelp{padding:9px 12px;font-size:11.5px;color:var(--muted);justify-self:end;display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center}
+
+#touch{position:absolute;left:0;right:0;bottom:0;padding:0 10px calc(10px + env(safe-area-inset-bottom,0px));display:none;justify-content:space-between;gap:8px;pointer-events:none}
+#touch .grp{display:flex;gap:6px}
+#touch button{pointer-events:auto;width:58px;height:54px;border-radius:10px;border:1px solid var(--line-strong);background:rgba(6,14,10,.72);font-size:13px;font-weight:700;touch-action:none;user-select:none;-webkit-user-select:none}
+#touch button.whip{background:rgba(255,178,30,.22);border-color:var(--led);color:var(--led)}
+#touch button.on{background:rgba(255,255,255,.2)}
+#pauseBtn{position:absolute;right:16px;top:calc(142px + env(safe-area-inset-top,0px));pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer}
+
+body.touch #touch{display:flex}
+body.touch .keyhelp{display:none}
+body.touch .hud-bottom{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+@media (max-width:480px){#touch button{width:46px;font-size:12px}#touch .grp{gap:4px}}
+@media (max-width:820px){
+  .hud-bottom{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .keyhelp{display:none}
+  .reinpanel{width:100%}
+}
+@media (max-width:560px){
+  .hud-top{grid-template-columns:minmax(0,1fr) auto;padding-left:10px;padding-right:10px}
+  .hud-top .center{grid-column:1/-1;grid-row:2}
+  .raceinfo{padding:6px 9px}
+  .ri-time{font-size:17px}
+  #minimap{width:150px;height:82px}
+  #hRemain{font-size:30px} #hRank{font-size:24px}
+  .hud-bottom{grid-template-columns:minmax(0,1fr);padding-left:10px;padding-right:10px;gap:6px}
+  .horsepanel{padding:7px 9px}
+  .hp-bars{grid-template-columns:auto 1fr 30px;gap:3px 6px;margin-top:5px}
+  #feel{font-size:12px;margin-top:6px;padding:5px 7px}
+  .hp-head .chip{display:none}
+  .reinpanel{padding:7px 10px}
+  #pauseBtn{top:auto;bottom:calc(330px + env(safe-area-inset-bottom,0px))}
+}
+
+/* ---------- ポーズ / 結果 ---------- */
+.modal{position:absolute;inset:0;display:grid;place-items:center;background:rgba(3,8,6,.7);padding:16px}
+.modal .box{width:min(380px,100%);padding:22px;text-align:center}
+.modal h2{font-family:var(--f-disp);font-weight:400;margin:0 0 16px;font-size:26px}
+.btn{cursor:pointer;border:1px solid var(--line-strong);background:rgba(255,255,255,.04);border-radius:6px;padding:12px 16px;font-size:14px;font-weight:700;width:100%}
+.btn.pri{background:var(--led);color:#1a1000;border-color:var(--led)}
+.btn + .btn{margin-top:8px}
+
+#result{background:rgba(3,8,6,.9)}
+.res-wrap{max-width:1100px;margin:0 auto;padding:calc(24px + env(safe-area-inset-top,0px)) 20px calc(36px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:880px){.res-wrap{grid-template-columns:minmax(0,1fr)}}
+.board{background:#050706;border:1px solid #1f2a24;border-radius:8px;padding:16px;box-shadow:inset 0 0 40px rgba(0,0,0,.8)}
+.board-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:1px solid #1f2a24;padding-bottom:10px;margin-bottom:8px}
+.board-head h2{margin:0;font-family:var(--f-disp);font-weight:400;font-size:22px}
+.board-head .led{font-size:14px}
+.tbl-wrap{overflow-x:auto}
+table.res{border-collapse:collapse;width:100%;min-width:520px;font-size:13px}
+table.res th{font-weight:500;color:var(--dim);font-size:11px;letter-spacing:.1em;text-align:left;padding:6px 6px;border-bottom:1px solid #1f2a24}
+table.res td{padding:7px 6px;border-bottom:1px solid #121a16;font-variant-numeric:tabular-nums}
+table.res td.l{font-family:var(--f-led);color:var(--led);text-shadow:0 0 8px var(--led-glow);font-size:15px}
+table.res tr.me td{background:rgba(255,178,30,.1)}
+table.res tr.me td.nm{color:var(--led);font-weight:700}
+.wk{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:3px;font-family:var(--f-led);font-size:12px;box-shadow:0 0 0 1px rgba(255,255,255,.15)}
+.photo{font-family:var(--f-led);color:var(--bad);font-size:12px;margin-left:8px}
+
+.eval{padding:18px}
+.grade{display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--line);padding-bottom:14px}
+.grade .g{font-family:var(--f-disp);font-size:78px;line-height:.9;color:var(--led);text-shadow:0 0 24px var(--led-glow)}
+.grade .gt{font-size:13px;color:var(--muted);line-height:1.6}
+.grade .gt b{display:block;font-family:var(--f-disp);font-weight:400;font-size:22px;color:var(--ink)}
+.ev-rows{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;margin:14px 0;font-size:12.5px;color:var(--muted)}
+.ev-rows .bar{height:7px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.ev-rows .bar i{display:block;height:100%;background:var(--calm)}
+.ev-rows .v{font-family:var(--f-led);color:var(--ink);text-align:right}
+.advice{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.advice li{font-size:13.5px;line-height:1.65;padding:9px 11px;border-radius:5px;background:rgba(255,255,255,.04);border-left:3px solid var(--warn)}
+.advice li.good{border-color:var(--go)}
+.res-actions{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.newrec{font-family:var(--f-led);color:var(--go);font-size:13px;margin-top:6px}
+
+.lefttop{display:flex;flex-direction:column;gap:8px;justify-self:start;max-width:280px;width:100%}
+.lefttop .raceinfo{max-width:none}
+#rivals{padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+#rivals .rt{font-size:10.5px;color:var(--dim);letter-spacing:.14em}
+.rv{display:grid;grid-template-columns:22px 1fr;gap:0 8px;align-items:center}
+.rv .wk{width:22px;height:22px}
+.rv .who{font-size:12px;font-weight:700;line-height:1.3}
+.rv .who small{font-weight:400;color:var(--muted);font-size:10.5px;margin-left:4px}
+.rv .now{font-size:11.5px;color:var(--muted);line-height:1.3}
+.rv .now.hot{color:var(--bad);font-weight:700}
+.rv .now.ok{color:var(--go)}
+#chatlog{padding:0;display:flex;flex-direction:column;gap:4px}
+#chatlog .cl{font-size:12px;line-height:1.45;background:rgba(0,0,0,.5);border-radius:4px;padding:4px 8px;border-left:3px solid var(--bad);transition:opacity .6s}
+#chatlog .cl b{color:var(--led);font-weight:700;margin-right:4px}
+#chatlog .cl.old{opacity:.45}
+.bubble{position:absolute;left:0;top:0;background:#fbfaf6;color:#15110c;font-size:12.5px;font-weight:700;padding:5px 9px;border-radius:9px;white-space:nowrap;
+  box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid var(--bad);pointer-events:none;will-change:transform}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-8px;margin-left:-6px;border:6px solid transparent;border-top-color:var(--bad)}
+.bubble b{color:var(--bad);margin-right:4px}
+.bubble.plain{border-color:#999}.bubble.plain::after{border-top-color:#999}.bubble.plain b{color:#555}
+#form .fc[data-t]::after{content:attr(data-t);position:absolute;top:-13px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--bad);font-family:var(--f-body);font-weight:700;white-space:nowrap}
+#feints{display:flex;gap:4px;align-items:center;font-size:10.5px;color:var(--muted)}
+#feints i{width:9px;height:9px;transform:rotate(45deg);background:var(--calm);box-shadow:0 0 6px rgba(114,200,255,.5)}
+#feints i.used{background:rgba(255,255,255,.12);box-shadow:none}
+.gc-rivals{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px;font-size:12px;line-height:1.55}
+.gc-rivals b{color:var(--bad)}
+.gc-rivals span{color:var(--muted)}
+.tac{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:5px}
+.tac li{font-size:13px;line-height:1.55;padding-left:22px;position:relative}
+.tac li::before{position:absolute;left:0;top:0;font-family:var(--f-disp)}
+.tac li.good::before{content:"○";color:var(--go)} .tac li.bad::before{content:"×";color:var(--bad)}
+.ev-h{font-size:11px;letter-spacing:.14em;color:var(--dim);margin:14px 0 6px}
+table.res td.nm small{color:var(--bad);font-size:10.5px;margin-left:6px;font-weight:700}
+@media (max-width:560px){#rivals{display:none}.lefttop{max-width:none}#chatlog .cl.old{display:none}}
+@media (prefers-reduced-motion:reduce){#alert{transition:none}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="gl" aria-label="レース画面"></canvas>
+
+  <section id="menu" class="screen" aria-label="レース選択">
+    <div class="menu-wrap">
+      <header class="mast">
+        <h1>人馬<em>一体</em></h1>
+        <div class="mast-side">
+          <div class="kicker">JOCKEY'S FEEL ／ 芝・右回り・10頭立て</div>
+          <p class="lede">馬の耳と息づかいを感じて、性格と脚質を読み切れ。抑えるか、行かせるか——手綱ひとつで結果が変わる、一人称視点の競馬ゲーム。</p>
+        </div>
+      </header>
+
+      <div class="menu-grid">
+        <div class="col-left">
+          <section class="blk" aria-labelledby="h1c">
+            <h2 id="h1c"><span class="step">1</span>レースを選ぶ</h2>
+            <div id="courseList" class="course-list"></div>
+          </section>
+          <section class="blk" aria-labelledby="h3c">
+            <h2 id="h3c"><span class="step">3</span>条件を決めて発走</h2>
+            <p class="seg-label">相手のレベル</p>
+            <div class="seg" id="diffSeg"></div>
+            <p class="seg-label">馬場状態</p>
+            <div class="seg" id="groundSeg"></div>
+            <button id="startBtn" class="go">本馬場入場 →<small id="startSub"></small></button>
+          </section>
+          <section class="howto" aria-label="操作方法">
+            <h3>騎乗操作</h3>
+            <div class="keys-grid">
+              <span><kbd>↑</kbd> <kbd>W</kbd></span><span>促す（ペースを上げる／追い出す）</span>
+              <span><kbd>↓</kbd> <kbd>S</kbd></span><span>抑える（手綱を引いて脚を溜める）</span>
+              <span><kbd>←</kbd> <kbd>→</kbd></span><span>外へ／内ラチへ進路を変える</span>
+              <span><kbd>Space</kbd></span><span>ムチ（回数制限あり）</span>
+              <span><kbd>X</kbd> <kbd>Shift</kbd></span><span>なだめる（声をかけて落ち着かせる）</span>
+              <span><kbd>F</kbd></span><span>仕掛けるフリ（ライバルを釣って脚を使わせる・2回）</span>
+              <span><kbd>V</kbd></span><span>後ろを振り返る</span>
+              <span><kbd>P</kbd> <kbd>Esc</kbd></span><span>一時停止　<kbd>M</kbd> 音のオン／オフ</span>
+            </div>
+            <ul class="tips">
+              <li>毎レース3人のクセ者騎手が乗っている。逃げてスローに落とす<b>鬼塚</b>、あなたをマークする<b>影山</b>、内に閉じ込める<b>壁井</b>。</li>
+              <li>ゲートが開いた瞬間に <kbd>↑</kbd> で好スタート。開く前に押すと立ち上がって出遅れる。</li>
+              <li>馬の耳を見よ。前を向いていれば集中、後ろに絞っていたらイライラしている。</li>
+              <li>末脚が使えるのは残り600mから。溜めた分だけ伸びる。</li>
+              <li>カーブで外を回ると距離をロスする。内ラチ沿いは近いが、前が詰まりやすい。</li>
+            </ul>
+          </section>
+        </div>
+        <section class="blk" aria-labelledby="h2c">
+          <h2 id="h2c"><span class="step">2</span>騎乗馬を選ぶ <small>出馬表</small></h2>
+          <div id="horseList" class="horse-list"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <div id="hud" hidden>
+    <div class="hud-top">
+      <div class="lefttop">
+        <div class="raceinfo panel">
+          <div class="ri-name" id="riName"></div>
+          <div class="ri-meta" id="riMeta"></div>
+          <div class="ri-time led" id="hTime">0:00.0</div>
+        </div>
+        <div id="rivals" class="panel"></div>
+        <div id="chatlog" aria-live="polite"></div>
+      </div>
+      <div class="center">
+        <div class="bigline">
+          <span><span class="lab">残り</span> <span class="led" id="hRemain">0</span><span class="unit">m</span></span>
+          <span id="hRank">-<small>番手</small></span>
+        </div>
+        <div id="ticker"></div>
+      </div>
+      <canvas id="minimap" width="440" height="240" aria-label="コース全体図"></canvas>
+    </div>
+    <div id="alert"></div>
+    <div id="bubbles"></div>
+    <div id="gatecard" class="panel" hidden></div>
+    <button id="pauseBtn" type="button">Ⅱ 一時停止</button>
+    <div class="hud-bottom">
+      <div class="horsepanel panel">
+        <div class="hp-head"><b id="hpName"></b><span class="chip st" id="hpStyle"></span><span class="chip tp" id="hpTemper"></span></div>
+        <div class="hp-bars">
+          <span>スタミナ</span><div class="bar" id="bSta"><i></i></div><span class="num" id="nSta"></span>
+          <span>溜め</span><div class="bar" id="bTame"><i></i></div><span class="num" id="nTame"></span>
+          <span>人馬一体</span><div class="bar" id="bMood"><i></i></div><span class="num" id="nMood"></span>
+          <span>興奮</span><div class="bar" id="bAgit"><i></i></div><span class="num" id="nAgit"></span>
+        </div>
+        <div id="feel"></div>
+      </div>
+      <div class="reinpanel panel">
+        <div id="form"></div>
+        <div class="form-lab"><span>最後方</span><span>隊列</span><span>先頭</span></div>
+        <div class="rein-row">
+          <span class="lab">手綱</span>
+          <div id="rein">
+            <div id="reinMark"></div><div id="reinEff"></div>
+            <span class="z" style="left:17%">抑える</span><span class="z" style="left:48%">折り合い</span><span class="z" style="left:71%">促す</span><span class="z" style="left:90%">追う</span>
+          </div>
+        </div>
+        <div class="rein-meta">
+          <div id="whips" aria-label="ムチの残り"></div>
+          <div id="feints" aria-label="フェイントの残り"></div>
+          <div><span class="led" id="hSpeed">0.0</span> <span class="unit" style="font-size:12px">km/h</span></div>
+        </div>
+      </div>
+      <div class="keyhelp panel">
+        <kbd>↑↓</kbd><span>促す／抑える</span>
+        <kbd>←→</kbd><span>外／内</span>
+        <kbd>Space</kbd><span>ムチ</span>
+        <kbd>X</kbd><span>なだめる</span>
+        <kbd>F</kbd><span>仕掛けるフリ</span>
+        <kbd>V</kbd><span>振り返る</span>
+      </div>
+    </div>
+    <div id="touch">
+      <div class="grp"><button data-k="left" type="button">←外</button><button data-k="right" type="button">内→</button></div>
+      <div class="grp"><button data-k="down" type="button">抑え</button><button data-k="up" type="button">促す</button></div>
+      <div class="grp"><button data-k="soothe" type="button">なだめ</button><button data-k="feint" type="button">フリ</button><button data-k="whip" class="whip" type="button">ムチ</button></div>
+    </div>
+  </div>
+
+  <section id="pause" class="modal" hidden>
+    <div class="box panel">
+      <h2>一時停止</h2>
+      <button class="btn pri" id="resumeBtn" type="button">レースに戻る</button>
+      <button class="btn" id="quitBtn" type="button">レースをやめてメニューへ</button>
+    </div>
+  </section>
+
+  <section id="result" class="screen" hidden aria-label="レース結果">
+    <div class="res-wrap">
+      <div class="board">
+        <div class="board-head"><h2 id="resTitle"></h2><span class="led" id="resMeta"></span></div>
+        <div class="tbl-wrap"><table class="res" id="resTable"></table></div>
+      </div>
+      <div class="eval panel" id="evalBox"></div>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+
+// === SIM START ===
+// ---------- コースとレースの物理モデル（DOM/Three.js 非依存） ----------
+const TRK = (() => { const S = 450, R = 150, W = 24, C = Math.PI * R; return { S, R, W, C, LAP: 2 * S + 2 * C, FIN: 400 }; })();
+const SPURT_ZONE = 600;      // 末脚が使える残り距離
+const mod = (a, n) => ((a % n) + n) % n;
+const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+const rand = (a, b) => a + Math.random() * (b - a);
+const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+function segOf(s) {
+  s = mod(s, TRK.LAP);
+  if (s < TRK.S) return 0;
+  if (s < TRK.S + TRK.C) return 1;
+  if (s < 2 * TRK.S + TRK.C) return 2;
+  return 3;
+}
+// s: 周回上の位置(内ラチ基準m) d: 内ラチからの距離(m) → ワールド座標と進行方向
+function trackPos(s, d) {
+  const { S, R, C } = TRK;
+  s = mod(s, TRK.LAP);
+  if (s < S) return { x: -S / 2 + s, z: -(R + d), h: 0 };
+  s -= S;
+  if (s < C) { const f = -Math.PI / 2 + s / R; return { x: S / 2 + (R + d) * Math.cos(f), z: (R + d) * Math.sin(f), h: f + Math.PI / 2 }; }
+  s -= C;
+  if (s < S) return { x: S / 2 - s, z: R + d, h: Math.PI };
+  s -= S;
+  const f = Math.PI / 2 + s / R;
+  return { x: -S / 2 + (R + d) * Math.cos(f), z: (R + d) * Math.sin(f), h: f + Math.PI / 2 };
+}
+
+const STYLES = {
+  nige:   { label: '逃げ', band: [0, 0.12],   tameMul: 0.55, e: 0.68, spurt: 640, where: '先頭',
+            front: '', back: 'ハナに立ちたがっている。促して先頭へ' },
+  senko:  { label: '先行', band: [0.08, 0.4], tameMul: 0.85, e: 0.56, spurt: 580, where: '2〜4番手',
+            front: '前に行きすぎ。好位（2〜4番手）に控えたい', back: '位置が後ろすぎる。好位まで押し上げて' },
+  sashi:  { label: '差し', band: [0.35, 0.72], tameMul: 1.1, e: 0.48, spurt: 540, where: '中団（5〜7番手）',
+            front: '前に行きすぎ。中団で脚を溜めたい', back: '後ろすぎる。中団まで押し上げて' },
+  oikomi: { label: '追込', band: [0.65, 1.0], tameMul: 1.35, e: 0.42, spurt: 500, where: '後方（7〜10番手）',
+            front: '前に行きすぎ。後方でじっと我慢させたい', back: '' },
+};
+const TEMPERS = {
+  sunao:    { label: '素直',     agit: 0.35 },
+  kakari:   { label: '掛かり癖', agit: 1.7 },
+  okubyo:   { label: '臆病',     agit: 0.7 },
+  makezu:   { label: '負けず嫌い', agit: 0.9 },
+  kimagure: { label: '気分屋',   agit: 0.8 },
+  zubui:    { label: 'ズブい',   agit: 0.1 },
+};
+const COATS = { kage: 0x6a3d1f, kuri: 0xa4552a, aokage: 0x2a1a12, ashige: 0xc9c6c0, kurokage: 0x3b2416, shiro: 0xe9e6df };
+const PLAYER_HORSES = [
+  { id: 'akatsuki', name: 'アカツキノカゼ', style: 'nige', temper: 'kakari', spd: 84, sta: 50, pow: 56, guts: 74, apt: [1000, 1800], coat: COATS.kuri, coatCss: '#a4552a',
+    comment: 'とにかく前に行きたい馬。抑えると頭を上げて掛かる。スタートを決めてハナに立たせれば、気分よく粘り込む。',
+    plan: 'スタートを決めて<b>先頭</b>へ。先頭に立てば落ち着く。抑えすぎは禁物、<b>手綱は「折り合い〜促す」</b>で。' },
+  { id: 'hoshi', name: 'ホシノミチビキ', style: 'senko', temper: 'sunao', spd: 72, sta: 70, pow: 66, guts: 66, apt: [1400, 2500], coat: COATS.kage, coatCss: '#6a3d1f',
+    comment: '素直で乗りやすい優等生。好位で流れに乗り、直線で抜け出す王道の競馬が合う。初めての方にお勧め。',
+    plan: '<b>2〜4番手</b>の好位で折り合い。前の馬の後ろに付けて風よけにし、<b>残り450m前後</b>から追い出す。' },
+  { id: 'kurogane', name: 'クロガネオーカン', style: 'sashi', temper: 'makezu', spd: 68, sta: 68, pow: 80, guts: 90, apt: [1600, 2600], coat: COATS.aokage, coatCss: '#2a1a12',
+    comment: '負けず嫌い。並ばれると闘志に火がつく。道中で抜かれるとカッとなるので、中団で壁を作って我慢させること。',
+    plan: '<b>中団</b>で前に馬を置いて我慢。直線では<b>他馬と馬体を併せる</b>と、競り合いでもうひと伸びする。' },
+  { id: 'shirayuki', name: 'シラユキヒメ', style: 'oikomi', temper: 'okubyo', spd: 62, sta: 82, pow: 94, guts: 55, apt: [1800, 3400], coat: COATS.ashige, coatCss: '#c9c6c0',
+    comment: '臆病な芦毛の牝馬。馬群に包まれると怯えて走る気をなくす。外めを気分よく回らせれば、直線で一気に伸びる。',
+    plan: 'スタートは無理せず<b>後方</b>へ。馬群を避けて<b>外め</b>を回り、脚を溜める。直線は<b>外から一気</b>に。' },
+  { id: 'donburako', name: 'ドンブラコ', style: 'senko', temper: 'zubui', spd: 72, sta: 96, pow: 62, guts: 88, apt: [2200, 3600], coat: COATS.kurokage, coatCss: '#3b2416',
+    comment: 'ズブくて反応が鈍いが、スタミナは無尽蔵。常に促してやらないと進んでいかない。ムチは多めに入れていい。',
+    plan: '手綱は常に<b>「促す」寄り</b>で。長距離ほど有利。ムチは<b>8本</b>使える。早めに動いてバテ比べに持ち込む。' },
+  { id: 'kimagure', name: 'キマグレルージュ', style: 'sashi', temper: 'kimagure', spd: 80, sta: 54, pow: 84, guts: 50, apt: [1200, 2000], coat: COATS.kuri, coatCss: '#c0602e',
+    comment: '能力は一級品だが気分屋。ムチを3発以上入れるとヘソを曲げる。声をかけてやると機嫌が直る。',
+    plan: '<b>中団</b>で脚を溜める。機嫌が悪いときは<b>なだめる（X）</b>。ムチは<b>2発まで</b>、決め手は手綱で。' },
+];
+const COURSES = [
+  { id: 'sprint',  name: '疾風ステークス', grade: 'G1', D: 1200, cat: '短距離', note: '向正面からの発走。スタートと位置取りが全て。' },
+  { id: 'mile',    name: '若葉マイルカップ', grade: 'G1', D: 1600, cat: 'マイル', note: '2コーナー奥から発走。息の入らない流れ。' },
+  { id: 'middle',  name: '秋桜記念', grade: 'G1', D: 2000, cat: '中距離', note: 'スタンド前から発走、コースを1周ちょっと。' },
+  { id: 'classic', name: '蒼穹ダービー', grade: 'G1', D: 2400, cat: 'クラシック', note: '4コーナー奥から発走。折り合いが試される大一番。' },
+  { id: 'long',    name: '天空賞', grade: 'G1', D: 3200, cat: '長距離', note: '1周と3/4。スタミナと我慢比べの消耗戦。' },
+];
+const DIFFS = {
+  easy:   { label: '未勝利戦', sub: 'やさしい', mean: 46 },
+  normal: { label: 'オープン', sub: 'ふつう', mean: 57 },
+  hard:   { label: 'G1級', sub: 'むずかしい', mean: 66 },
+};
+const GROUNDS = {
+  ryo:  { label: '良',   sub: '乾いた芝', v: 1.0,   s: 1.0 },
+  yaya: { label: '稍重', sub: '少し湿る', v: 0.99,  s: 1.05 },
+  omo:  { label: '重',   sub: 'スタミナ勝負', v: 0.975, s: 1.11 },
+};
+const AI_NAMES = ['サンダーロード', 'ミヤビノキミ', 'ブルーオーシャン', 'カゲロウ', 'ハルカゼ', 'テンクウノキシ', 'マーベラスデイ', 'ユメノカケハシ',
+  'ギンガテツドウ', 'ワイルドハート', 'ツキアカリ', 'レッドコメット', 'アオゾラ', 'サイレントミスト', 'ベニザクラ', 'イナズマキック', 'ナナイロノハネ',
+  'シンゲツ', 'コハクノヒカリ', 'オーロラベール', 'タイフーンアイ', 'ミナモノウタ', 'クレナイオー', 'ヤマブキ'];
+// クセ者騎手（毎レース3人）
+const RIVALS = {
+  pace: { name: '鬼塚', full: '鬼塚 剛', title: '逃げの鬼', mark: '逃',
+          desc: 'ハナを奪い、後続を離すとスローに落として粘り込む。横に並ばれると意地になって競り返す。',
+          counter: '横に並んで競りかければ脚を使わせられる（自分も消耗）。放っておくと逃げ切られる。' },
+  mark: { name: '影山', full: '影山 透', title: 'マーク屋', mark: 'マ',
+          desc: 'あなたの真後ろに張り付いて風よけにし、あなたが動いた瞬間に一緒に動く。',
+          counter: 'F の「仕掛けるフリ」で先に動かせば、脚を使わせて振り切れる。' },
+  futa: { name: '壁井', full: '壁井 守', title: '蓋の名手', mark: '蓋',
+          desc: 'レース後半、内ラチ沿いのあなたの外に並んで進路に蓋をする。',
+          counter: '早めに外へ出すか、↓で一度下げてから ← で外へ持ち出す。' },
+};
+function chat(race, r, text) { if (text && race.emit) race.emit('chat', { r, text }); }
+function logOnce(race, key, good, text) { if (race.tlogKeys[key]) return; race.tlogKeys[key] = 1; race.tlog.push({ good, text }); }
+const SILK_COLORS = [0xd8262e, 0x1f4fb8, 0xf2c200, 0x1c8f4a, 0xffffff, 0x151515, 0xef6aa8, 0xf08b00, 0x6a2fb0, 0x19b3c7, 0x8a1a2a, 0x2f2f7a];
+
+function wakuOf(no, N) {
+  // JRAの枠番割り当て（多頭数は外枠から2頭ずつ）
+  const extra = N - 8; const w = [];
+  for (let k = 1; k <= 8; k++) { const cnt = k > 8 - extra ? 2 : 1; for (let c = 0; c < cnt; c++) w.push(k); }
+  return w[no - 1];
+}
+function makeAI(name, diff, D) {
+  const r = () => clamp(Math.round(diff.mean + gauss() * 8), 25, 96);
+  const x = Math.random();
+  const style = x < 0.14 ? 'nige' : x < 0.5 ? 'senko' : x < 0.8 ? 'sashi' : 'oikomi';
+  const a0 = Math.round((D - rand(200, 800)) / 100) * 100, a1 = Math.round((D + rand(200, 800)) / 100) * 100;
+  const coat = pick([COATS.kage, COATS.kage, COATS.kuri, COATS.aokage, COATS.kurokage, COATS.ashige]);
+  return { name, spd: r(), sta: r(), pow: r(), guts: r(), style, temper: 'sunao', apt: [a0, a1], coat, silk: [pick(SILK_COLORS), pick(SILK_COLORS)] };
+}
+
+class Runner {
+  constructor(def, no, waku) {
+    Object.assign(this, { def, no, waku, name: def.name, isPlayer: !!def.isPlayer, spd: def.spd, sta: def.sta, pow: def.pow, guts: def.guts,
+      style: def.style, temper: def.temper || 'sunao', apt: def.apt });
+  }
+  reset(race, gateIdx) {
+    this.p = 0; this.d = 1.2 + gateIdx * 1.35; this.targetD = this.d; this.v = 0; this.used = 0; this.cap = race.cap;
+    this.effort = 0.5; this.eEff = 0.5; this.tame = 0; this.mood = 60; this.agit = 8; this.kakari = false;
+    this.whips = this.temper === 'zubui' ? 8 : 5; this.whipsMax = this.whips; this.whipUsed = 0; this.whipBoost = 0; this.kickRamp = 0;
+    this.sulk = false; this.compete = false; this.boxed = false; this.soothing = false; this.latInput = 0; this.sideBlocked = false;
+    this.finished = false; this.ft = null; this.t600 = null; this.rank = gateIdx; this.lastRank = gateIdx; this.moodDrift = 0;
+    this.startDelay = this.isPlayer ? Infinity : 0.05 + Math.random() * 0.3 + (Math.random() < 0.06 ? 0.7 : 0);
+    this.thinkT = Math.random() * 0.3; this.eBias = (Math.random() - 0.5) * 0.08;
+    this.spurtAt = STYLES[this.style].spurt + rand(-70, 70); this.nextWhip = rand(330, 420); this.stride = Math.random();
+    this.inBand = true; this.cover = false; this.draft = false; this.blocked = false; this.aheadGap = 1e9;
+    this.st = { tPre: 0, tBand: 0, tKakari: 0, moodSum: 0, moodT: 0, badWhips: 0, emptyAt: null, wideLoss: 0, blockedSpurt: 0, tameAtSpurt: null, tBoxed: 0,
+      markT: 0, futaT: 0, pressT: 0, boxOthersT: 0, boxedNames: [], feintCaught: 0 };
+    this.tt = {}; this.feints = 2; this.feintsMax = 2; this.movedAt = -99; this.pushT = 0; this.pushFlag = false;
+    const D = race.D; this.aptV = 1; this.aptS = 1;
+    if (D > this.apt[1]) this.aptS = 1 + (D - this.apt[1]) / 400 * 0.12;
+    if (D < this.apt[0]) this.aptV = 1 - (this.apt[0] - D) / 400 * 0.012;
+    this.vC = (15.9 + this.spd * 0.01) * this.aptV * race.ground.v;
+    this.zone = this.temper === 'zubui' ? 1000 : SPURT_ZONE;   // ズブい馬はロングスパート
+  }
+  get stamina() { return Math.max(0, 100 * (1 - this.used / this.cap)); }
+  get started() { return this._started; }
+
+  update(dt, race) {
+    const D = race.D, rem = D - this.p, N = race.N;
+    this._started = race.t >= race.openAt + this.startDelay;
+    if (!this._started) return;
+    const ST = STYLES[this.style];
+    const pre = rem > this.zone;
+    const frac = this.rank / (N - 1);
+    // 周囲の馬
+    let ahead = null, gap = 1e9, pack = 0, along = 0;
+    for (const o of race.runners) {
+      if (o === this) continue;
+      const dp = o.p - this.p, dd = o.d - this.d;
+      if (dp > 0 && Math.abs(dd) < 1.15 && dp < gap) { gap = dp; ahead = o; }
+      if (Math.abs(dp) < 4.5 && Math.abs(dd) < 2.7) pack++;
+      if (Math.abs(dp) < 2.4 && Math.abs(dd) < 3.0) along++;
+    }
+    this.cover = !!ahead && gap < 9;
+    this.draft = !!ahead && gap > 1.2 && gap < 8;
+    this.blocked = !!ahead && gap < 3.2;
+    this.aheadGap = gap;
+    this.inBand = frac >= ST.band[0] - 0.001 && frac <= ST.band[1] + 0.001;
+
+    if (this.isPlayer) this.mind(dt, race, pre, pack, along);
+    else this.think(dt, race, frac, rem, ahead, gap);
+
+    let e = this.effort;
+    if (this.temper === 'zubui' && this.whipBoost < 0.1) e = Math.max(0, e - 0.1);
+    if (this.kakari) e = Math.max(e, 0.95);
+    if (this.finished) e = 0;
+    this.eEff = e;
+
+    let vt = this.vC * (0.90 + 0.10 * e) * (1 + (this.mood - 50) / 50 * 0.015);
+    let bonus = 0;
+    if (!pre && !this.finished && e > 0.7) {
+      this.kickRamp = Math.min(1, this.kickRamp + dt / 1.6);
+      if (this.st.tameAtSpurt === null) {
+        this.st.tameAtSpurt = this.tame; this.st.spurtRem = rem;
+        if (this.tactic === 'mark') { const g = race.player.p - this.p; this.tt.slip = g > 0 && g < 10; }
+      }
+      const tm = this.temper === 'zubui' ? Math.max(this.tame, 70) : this.tame;   // ズブい馬はスタミナで押し切る
+      let k = (0.3 + this.pow * 0.014) * (0.25 + 1.25 * tm / 100);
+      if (this.style === 'nige' && this.rank === 0) k += 0.4;
+      if (this.tt.slip) k += 0.35;   // マークした相手を風よけにして温存した分
+      if (this.sulk) k *= 0.5;
+      bonus += k * Math.min(1, (e - 0.7) / 0.3) * this.kickRamp;
+    } else if (e <= 0.7) this.kickRamp = Math.max(0, this.kickRamp - dt);
+    this.compete = false;
+    if (this.temper === 'makezu' && !pre && along > 0 && e > 0.7 && !this.finished) { bonus += 0.55; this.compete = true; }
+    bonus += this.whipBoost;
+    this.whipBoost *= Math.exp(-dt / 2.0);
+    vt += bonus;
+
+    const sta = this.stamina;
+    if (sta < 25) {
+      let f = (25 - sta) / 25 * 0.22 * (1 - this.guts * 0.003);
+      if (this.style === 'nige' && this.rank === 0) f *= 0.8;
+      vt *= 1 - f;
+    }
+    if (this.finished) vt = Math.max(5, this.v - 2);
+    if (ahead && gap < 3.0 && !this.finished) {
+      const cap = ahead.v - (3.0 - gap) * 1.5;
+      if (vt > cap) { vt = cap; if (!pre) this.st.blockedSpurt += dt; }
+    }
+    const acc = (this.v < 12 ? 2.8 + this.pow * 0.012 : 0.7 + this.pow * 0.006) * (this.temper === 'zubui' ? 0.75 : 1);
+    const dv = vt - this.v;
+    this.v = Math.max(0, this.v + (dv > 0 ? Math.min(dv, acc * dt) : Math.max(dv, -2.4 * dt)));
+
+    this.lateral(dt, race);
+    this.social(dt, race, rem, pre);
+
+    const s = mod(race.startS + this.p, TRK.LAP), seg = segOf(s);
+    const curve = seg === 1 || seg === 3;
+    // 外を回るほど距離をロス（ゲーム用に半分に緩和）
+    const cf = curve ? TRK.R / (TRK.R + this.d * 0.5) : 1;
+    if (curve && !this.finished) this.st.wideLoss += this.v * dt * (TRK.R / (TRK.R + 0.5) - cf);
+    this.p += this.v * dt * cf;
+    this.stride = (this.stride + this.v * dt / 6.6) % 1;
+
+    // スタミナ消費
+    const eq = clamp((this.v / this.vC - 0.90) / 0.10, 0, 1);
+    let rate = 0.20 + 0.9 * Math.pow(Math.min(e, eq + 0.08), 2) + Math.max(0, this.v - this.vC * 1.02);
+    rate *= (1.25 - this.sta * 0.005) * this.aptS * race.ground.s;
+    if (this.draft) rate *= 0.88;
+    if (pre && this.style === 'nige' && this.rank === 0) rate *= 0.88;
+    if (this.kakari) rate *= 1.2;
+    if (pre && this.p > 300) rate *= this.inBand ? 0.95 : 1.04;
+    if (!this.finished) this.used += rate * dt;
+    if (this.stamina <= 0 && this.st.emptyAt === null && !this.finished) this.st.emptyAt = Math.max(0, rem);
+
+    // 溜め
+    if (pre && !this.finished) {
+      const base = 100 / (Math.max(20, (D - SPURT_ZONE) / 15.8) * 0.5);
+      if (this.kakari) this.tame -= base * 1.2 * dt;
+      else if (e <= 0.62) this.tame += base * clamp((0.62 - e) / 0.22, 0, 1) * ST.tameMul * (this.inBand ? 1 : 0.4) * (this.draft ? 1.2 : 1) * (0.6 + this.mood / 100 * 0.6) * dt;
+      else if (e > 0.75) this.tame -= base * 0.7 * dt;
+      this.tame = clamp(this.tame, 0, 100);
+      if (this.p > 300) { this.st.tPre += dt; if (this.inBand) this.st.tBand += dt; }
+    }
+    if (!this.finished) {
+      this.st.moodSum += this.mood * dt; this.st.moodT += dt;
+      if (this.kakari) this.st.tKakari += dt;
+      if (this.t600 === null && this.p >= D - 600) this.t600 = race.t - (this.p - (D - 600)) / Math.max(1, this.v * cf);
+      if (this.p >= D) {
+        this.finished = true;
+        this.ft = race.t - (this.p - D) / Math.max(1, this.v * cf);
+        this.finishStamina = this.stamina;
+        race.emit && race.emit('finish', this);
+      }
+    }
+  }
+
+  lateral(dt, race) {
+    let dir = 0;
+    if (this.isPlayer) dir = this.latInput;
+    else { const df = this.targetD - this.d; if (Math.abs(df) > 0.05) dir = Math.sign(df); }
+    this.sideBlocked = false;
+    if (!dir || this.v < 1) return;
+    for (const o of race.runners) {
+      if (o === this) continue;
+      const dp = o.p - this.p, dd = (o.d - this.d) * dir;
+      if (Math.abs(dp) < 2.4 && dd > 0 && dd < 1.25) { this.sideBlocked = true; if (!this.isPlayer) this.targetD = this.d; return; }
+    }
+    let nd = this.d + dir * (this.isPlayer ? 1.7 : 1.1) * dt;
+    if (!this.isPlayer && (this.targetD - nd) * dir < 0) nd = this.targetD;
+    this.d = clamp(nd, 0.8, TRK.W - 1.2);
+  }
+
+  think(dt, race, frac, rem, ahead, gap) {
+    this.thinkT -= dt;
+    if (this.thinkT > 0) return;
+    this.thinkT = 0.25 + Math.random() * 0.1;
+    const ST = STYLES[this.style];
+    if (this.finished) { this.effort = 0; return; }
+    const pre = rem > this.spurtAt, T = this.tt;
+    let tac = null;
+    if (T.goUntil) {
+      // フェイントなどに釣られて動いている最中
+      if (race.t < T.goUntil) { this.effort = 1; tac = 'effort'; }
+      else {
+        T.goUntil = 0;
+        if (rem > this.spurtAt + 100 && this.tactic) chat(race, this, this.tactic === 'mark' ? 'しまった、動かされたか…' : 'くっ、仕掛けが早すぎたか…');
+      }
+    }
+    if (!tac && this.tactic && this.p >= 180) tac = this.tacticThink(race, frac, rem, pre);
+    if (tac === 'all') return;
+    if (tac !== 'effort') {
+      if (this.p < 180) this.effort = this.style === 'nige' ? 1 : 0.8;
+      else if (pre) {
+        let e = ST.e + this.eBias;
+        if (frac < ST.band[0] - 0.02) e -= 0.1; else if (frac > ST.band[1] + 0.02) e += 0.1;
+        if (this.stamina < 45 && rem > 900) e -= 0.06;
+        this.effort = clamp(e, 0.28, 0.82);
+      } else {
+        this.effort = 1;
+        if (this.whips > 0 && rem < this.nextWhip) { this.whip(race); this.nextWhip -= rand(90, 150); }
+      }
+    }
+    // 進路
+    const lane = 1.35;
+    const wantGo = ahead && gap < 6 && (!pre || ahead.v < this.v - 0.2 || frac > ST.band[1] + 0.05);
+    if (wantGo) {
+      const out = this.d + lane, inn = this.d - lane;
+      if (pre && inn >= 0.9 && laneFree(race, this, inn, 6)) this.targetD = inn;
+      else if (out <= TRK.W - 2 && laneFree(race, this, out, 3.2)) this.targetD = out;
+    } else if (!ahead || gap > 10 || pre) {
+      const inn = Math.max(0.9, this.d - lane);
+      if (inn < this.d - 0.2 && laneFree(race, this, inn, 5)) this.targetD = inn;
+    }
+  }
+
+  // クセ者騎手の作戦
+  tacticThink(race, frac, rem, pre) {
+    const P = race.player, T = this.tt, t = race.t;
+    if (!pre) { if (T.boxing) { T.boxing = false; chat(race, this, 'お先に失礼！'); } T.pressedByP = false; return null; }
+    if (this.tactic === 'pace') {
+      if (this.rank === 0) {
+        let rival = null;
+        for (const o of race.runners) {
+          const dd = Math.abs(o.d - this.d);
+          if (o !== this && Math.abs(o.p - this.p) < 2.8 && dd > 0.8 && dd < 3.2) { rival = o; break; }
+        }
+        T.pressedByP = !!rival && rival.isPlayer;
+        if (rival) {
+          this.effort = 0.88; T.slow = false;
+          if (!T.saidDuel || t - T.saidDuel > 15) { T.saidDuel = t; chat(race, this, rival.isPlayer ? '競りかけてくるか！ ハナは譲らん！' : 'ハナは譲らんぞ！'); }
+        } else if (this.p - race.order[1].p > 2.5) {
+          this.effort = 0.5; T.slow = true;
+          if (!T.saidSlow && this.p > 500) { T.saidSlow = true; chat(race, this, 'よし、このままスローに落とす…'); }
+        } else { this.effort = 0.64; T.slow = false; }
+        return 'effort';
+      }
+      T.pressedByP = false; T.slow = false;
+      if (!T.gaveUp && this.p < 800) {
+        this.effort = 0.92;
+        if (!T.saidChase) { T.saidChase = true; chat(race, this, 'ハナはオレのものだ！'); }
+        return 'effort';
+      }
+      if (!T.gaveUp) {
+        T.gaveUp = true; chat(race, this, 'ちっ、ハナは譲るか…');
+        if (race.order[0] === P) logOnce(race, 'hana', true, `ハナ争いで${this.jockey}に競り勝った`);
+      }
+      return null;
+    }
+    if (P.finished || !P._started) return null;
+    const dp = P.p - this.p;
+    if (this.tactic === 'mark') {
+      if (P.movedAt > (T.seenMove ?? -1) && t - P.movedAt < 1.2 && dp > -3 && dp < 30) {
+        T.seenMove = P.movedAt; T.goUntil = t + 6; this.tame = Math.max(0, this.tame - 30); this.used += 3;
+        chat(race, this, '動いたな、逃がさん！'); this.effort = 1; return 'effort';
+      }
+      if (dp < -15 || dp > 50) { T.marking = false; return null; }
+      T.marking = dp > 0 && dp < 12;
+      if (T.marking && !T.saidMark) { T.saidMark = true; chat(race, this, `${P.name}の後ろ、いただくぜ。`); }
+      this.effort = clamp(P.eEff + (dp < 3.5 ? -0.15 : dp > 9 ? 0.15 : 0), 0.3, 0.88);
+      this.targetD = clamp(dp > 3 && dp < 14 ? P.d : P.d + 1.4, 0.9, TRK.W - 2);
+      return 'all';
+    }
+    if (this.tactic === 'futa') {
+      const active = rem < race.D * 0.62 && P.d < 3.6 && dp > -14 && dp < 14;
+      if (!active) { if (T.boxing) { T.boxing = false; chat(race, this, '逃げられたか…'); } return null; }
+      const want = P.d + 1.3;
+      this.targetD = clamp(want, 0.9, TRK.W - 2);
+      this.effort = clamp(P.eEff + (dp > 0.4 ? 0.22 : dp < -1.2 ? -0.22 : 0), 0.35, 0.95);
+      if (Math.abs(dp) < 2.4 && Math.abs(this.d - want) < 0.5 && !T.boxing) {
+        T.boxing = true; T.boxCount = (T.boxCount || 0) + 1;
+        chat(race, this, T.boxCount > 1 ? 'また閉じ込めてやる。' : '内に閉じ込めてやるよ。');
+      }
+      return 'all';
+    }
+    return null;
+  }
+
+  // 騎手どうしの駆け引き（台詞・蓋・マークの計測）
+  social(dt, race, rem, pre) {
+    const P = race.player;
+    if (this.isPlayer || this.finished || !P._started || P.finished) return;
+    const dp = P.p - this.p, T = this.tt;
+    // プレイヤーがこの馬の外に並んで蓋をしている
+    if (rem < 900 && this.blocked && Math.abs(dp) < 2.6 && P.d - this.d > 0.4 && P.d - this.d < 1.8) {
+      P.st.boxOthersT += dt;
+      if (!T.boxedByP) { T.boxedByP = true; P.st.boxedNames.push(this); chat(race, this, pick(['おい、外を開けてくれ！', '出られない…！', 'くそっ、閉じ込められた！'])); }
+    }
+    // 直線で差された
+    if (!pre && !T.saidPassed && T.wasAhead && dp > 1 && dp < 6) {
+      T.saidPassed = true;
+      if (this.tactic || Math.random() < 0.35) chat(race, this, this.tactic ? `やるな…${P.name}！` : pick(['差された…！', '伸びない…！']));
+    }
+    if (dp < 0) T.wasAhead = true; else if (dp > 6) T.wasAhead = false;
+    if (this.tactic && !T.saidFade && this.stamina < 8 && rem > 50) { T.saidFade = true; chat(race, this, this.tactic === 'pace' ? '脚が上がった…' : 'ここまでか…'); }
+    if (this.tactic === 'mark' && pre && dp > 0 && dp < 12) P.st.markT += dt;
+    if (this.tactic === 'futa' && T.boxing && Math.abs(dp) < 2.6) P.st.futaT += dt;
+    if (this.tactic === 'pace' && T.pressedByP) P.st.pressT += dt;
+  }
+
+  // 仕掛けるフリ（プレイヤー専用・2回まで）
+  feint(race) {
+    if (this.feints <= 0 || !this._started || this.finished) return null;
+    const rem = race.D - this.p;
+    if (rem <= this.zone) return 'late';
+    if (!race.runners.some(o => !o.isPlayer && !o.finished && o.p - this.p <= 25 && o.p - this.p >= -30)) return 'none';
+    this.feints--; this.used += 1.2; this.whipBoost = Math.min(1.8, this.whipBoost + 0.35); this.movedAt = race.t;
+    const caught = [];
+    for (const o of race.runners) {
+      if (o.isPlayer || o.finished || o.tt.goUntil) continue;
+      const dp = o.p - this.p;
+      if (dp > 25 || dp < -30) continue;
+      const ch = o.tactic === 'mark' ? (dp < 2 ? 1 : 0) : o.tactic === 'pace' ? (dp > 0 && dp < 12 ? 0.9 : 0) : 0.3;
+      if (Math.random() < ch) {
+        o.tt.goUntil = race.t + (o.tactic === 'pace' ? 7 : 5.5); o.tt.seenMove = this.movedAt;
+        o.tame = Math.max(0, o.tame - 25); o.used += 2.5; o.thinkT = 0; caught.push(o);
+        chat(race, o, o.tactic === 'mark' ? '動いたな、逃がさん！' : o.tactic === 'pace' ? '来るか！ 行かせん！' : o.tactic === 'futa' ? 'させるか！' : null);
+        if (o.tactic) logOnce(race, 'feint-' + o.tactic, true, `フェイントで${o.jockey}を釣った（残り${Math.round(rem)}m）`);
+      }
+    }
+    this.st.feintCaught += caught.length;
+    return caught;
+  }
+
+  whip(race) {
+    if (this.whips <= 0 || this.finished || !this._started) return null;
+    this.whips--; this.whipUsed++;
+    const rem = race.D - this.p;
+    let b = this.temper === 'zubui' ? 1.25 : 0.85, res = 'ok';
+    if (rem > this.zone) {
+      b *= 0.35; this.st.badWhips++;
+      if (this.temper !== 'zubui') { this.mood -= 7; this.agit += TEMPERS[this.temper].agit * 14; res = 'early'; }
+    }
+    if (this.temper === 'kimagure' && this.whipUsed >= 3) { this.sulk = true; this.mood -= 25; b = 0; res = 'sulk'; }
+    if (this.temper === 'okubyo') this.mood -= 3;
+    this.whipBoost = Math.min(1.8, this.whipBoost + b);
+    this.kickRamp = 1;
+    this.used += 0.9;
+    this.mood = clamp(this.mood, 0, 100); this.agit = clamp(this.agit, 0, 100);
+    return res;
+  }
+
+  // プレイヤー馬の気持ち（興奮・人馬一体）
+  mind(dt, race, pre, pack, along) {
+    const k = TEMPERS[this.temper].agit;
+    let dA = -1.2, dM = 0;
+    if (this.finished) { this.kakari = false; return; }
+    if (pre && this.eEff >= 0.75) { this.pushT += dt; if (this.pushT > 1.2 && !this.pushFlag) { this.pushFlag = true; this.movedAt = race.t; } }
+    else if (this.eEff < 0.62) { this.pushT = 0; this.pushFlag = false; }
+    if (pre && this.p > 60) {
+      const restrain = Math.max(0, 0.56 - this.effort) / 0.56;
+      const calmByLead = this.rank === 0 && this.temper === 'kakari';
+      dA += k * restrain * 10 * (this.cover ? 0.35 : 1) * (calmByLead ? 0.3 : 1);
+      if (this.cover) dA -= 3;
+      if (this.effort > 0.64) dA -= 3;
+      if (calmByLead) dA -= 2;
+      if (this.temper === 'kakari' && restrain > 0.25 && !this.cover && Math.random() < 0.05 * dt) this.agit += 12;
+      if (this.p > 300) dM += this.inBand ? 1.4 : -1.0;
+      if (this.draft && (this.style === 'sashi' || this.style === 'oikomi')) dM += 0.3;
+      this.passCool = Math.max(0, (this.passCool || 0) - dt);
+      if (this.temper === 'makezu' && this.rank > this.lastRank && this.p > 200 && this.passCool <= 0) { this.agit += 6; this.passCool = 4; }
+    } else if (!pre) {
+      dA -= 6;
+      if (this.compete) dM += 3;
+    }
+    this.lastRank = this.rank;
+    this.boxed = false;
+    if (this.temper === 'okubyo' && this.p > 80) {
+      if (pack >= 3) { this.boxed = true; dM -= 3; dA += 5 * k; this.st.tBoxed += dt; }
+      else if (pack === 0) dM += 0.8;
+    }
+    if (this.temper === 'kimagure') { this.moodDrift = clamp(this.moodDrift + (Math.random() - 0.5) * dt * 6, -3, 3); dM += this.moodDrift; }
+    if (this.soothing) { dA -= 14; dM += this.temper === 'kimagure' ? 4 : 1.2; }
+    if (this.kakari) dM -= 2.5;
+    if (this.stamina < 10) dM -= 1;
+    this.agit = clamp(this.agit + dA * dt, 0, 100);
+    this.mood = clamp(this.mood + dM * dt, 0, 100);
+    if (!this.kakari && this.agit >= 75) { this.kakari = true; race.emit && race.emit('kakari', this); }
+    else if (this.kakari && this.agit <= 40) { this.kakari = false; race.emit && race.emit('calm', this); }
+  }
+}
+
+function laneFree(race, self, d, range) {
+  for (const o of race.runners) if (o !== self && Math.abs(o.p - self.p) < range && Math.abs(o.d - d) < 1.2) return false;
+  return true;
+}
+
+function createRace(course, diffKey, groundKey, playerDef) {
+  const D = course.D, N = 10;
+  const diff = DIFFS[diffKey], ground = GROUNDS[groundKey];
+  const playerNo = 1 + Math.floor(Math.random() * N);
+  const names = shuffle(AI_NAMES);
+  const runners = [];
+  let ai = 0, hasNige = false;
+  for (let no = 1; no <= N; no++) {
+    let def;
+    if (no === playerNo) def = Object.assign({}, playerDef, { isPlayer: true, silk: [0xffb21e, 0x111111] });
+    else { def = makeAI(names[ai++], diff, D); if (def.style === 'nige') hasNige = true; }
+    runners.push(new Runner(def, no, wakuOf(no, N)));
+  }
+  if (!hasNige) { const r = runners.find(x => !x.isPlayer); r.style = r.def.style = 'nige'; }
+  const race = { course, D, N, diff, ground, t: 0, openAt: Infinity, startS: mod(TRK.FIN - D, TRK.LAP),
+    cap: 0.425 * (D - 450) / 16 + 60, runners, player: runners[playerNo - 1], order: runners.slice(), emit: null,
+    tlog: [], tlogKeys: {}, pace: null };
+  runners.forEach((r, i) => r.reset(race, i));
+  const ais = shuffle(runners.filter(r => !r.isPlayer));
+  const take = (pred, tac) => { const r = ais.find(x => !x.tactic && pred(x)) || ais.find(x => !x.tactic); r.tactic = tac; r.jockey = RIVALS[tac].name; };
+  take(x => x.style === 'nige', 'pace');
+  take(x => x.style === 'sashi' || x.style === 'senko', 'mark');
+  take(x => x.style === 'senko' || x.style === 'sashi', 'futa');
+  race.rivals = ['pace', 'mark', 'futa'].map(t => runners.find(r => r.tactic === t));
+  return race;
+}
+function stepRace(race, dt) {
+  race.t += dt;
+  const order = race.runners.slice().sort((a, b) => (b.finished && a.finished) ? a.ft - b.ft : b.p - a.p);
+  order.forEach((r, i) => { r.rank = i; });
+  race.order = order;
+  for (const r of race.runners) r.update(dt, race);
+  // 前半の通過タイムでペースを判定（短距離は前半3F、それ以外は1000m）
+  if (!race.pace && race.t > race.openAt) {
+    const splitD = race.D <= 1600 ? 600 : 1000;
+    if (order[0].p >= splitD) {
+      const time = race.t - race.openAt, par = 0.06325 * splitD + 2.15, th = par * 0.009;
+      const kind = time < par - th ? 'high' : time > par + th ? 'slow' : 'mid';
+      race.pace = { splitD, time, kind, label: { high: 'ハイペース', slow: 'スローペース', mid: '平均ペース' }[kind] };
+      if (kind === 'slow') race.runners.forEach(r => { if (!r.isPlayer && (r.style === 'sashi' || r.style === 'oikomi') && Math.random() < 0.6) r.spurtAt += 150; });
+      race.emit && race.emit('pace', race.pace);
+    }
+  }
+}
+// === SIM END ===
+
+// ---------- 小道具 ----------
+const $ = id => document.getElementById(id);
+const CIRC = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫'];
+const WAKU_CSS = ['', 'var(--w1)', 'var(--w2)', 'var(--w3)', 'var(--w4)', 'var(--w5)', 'var(--w6)', 'var(--w7)', 'var(--w8)'];
+const WAKU_HEX = [0, 0xf7f7f2, 0x1d1d1d, 0xe0261c, 0x1d63c9, 0xf2cf00, 0x1d9a4a, 0xf08b00, 0xef6aa8];
+const WAKU_TXT = ['', '#111', '#fff', '#fff', '#fff', '#111', '#fff', '#111', '#111'];
+const WAKU_STR = ['', '#f7f7f2', '#1d1d1d', '#e0261c', '#1d63c9', '#f2cf00', '#1d9a4a', '#f08b00', '#ef6aa8'];
+const tag = r => `${CIRC[r.no - 1]}${r.name}`;
+const fmtTime = t => { if (t == null || !isFinite(t)) return '-'; const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s < 10 ? '0' : ''}${s.toFixed(1)}`; };
+const grade = v => v >= 90 ? 'S' : v >= 78 ? 'A' : v >= 65 ? 'B' : v >= 50 ? 'C' : 'D';
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem('jinba-records-v1') || '{}'); } catch (e) { return {}; } },
+  set(v) { try { localStorage.setItem('jinba-records-v1', JSON.stringify(v)); } catch (e) {} },
+};
+
+// ---------- 音（Web Audio で合成） ----------
+const Snd = {
+  ctx: null, master: null, muted: false, noise: null, loops: {},
+  init() {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    try {
+      const ctx = this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : 0.7; this.master.connect(ctx.destination);
+      const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), ch = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+      this.noise = buf;
+      const mk = (type, freq, q) => {
+        const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+        const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+        const g = ctx.createGain(); g.gain.value = 0;
+        src.connect(f); f.connect(g); g.connect(this.master); src.start();
+        return g;
+      };
+      this.loops.wind = mk('bandpass', 700, 0.6);
+      this.loops.crowd = mk('bandpass', 1300, 0.5);
+      this.loops.rumble = mk('lowpass', 160, 0.8);
+    } catch (e) { this.ctx = null; }
+  },
+  setMuted(m) { this.muted = m; if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.7, this.ctx.currentTime, 0.05); },
+  burst(type, freq, vol, dur, q = 1) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource(); src.buffer = this.noise;
+    const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.master); src.start(t, Math.random()); src.stop(t + dur + 0.02);
+  },
+  hoof(v) { this.burst('lowpass', 220 + Math.random() * 80, v, 0.11); },
+  whip() { this.burst('highpass', 2600, 0.5, 0.06); setTimeout(() => this.burst('bandpass', 900, 0.25, 0.05, 2), 20); },
+  clang() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    [180, 243, 377].forEach(fq => { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = fq; const g = ctx.createGain(); g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35); o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.4); });
+    this.burst('highpass', 1500, 0.4, 0.25);
+  },
+  fanfare() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t0 = ctx.currentTime + 0.1;
+    // オリジナルの短いファンファーレ
+    const seq = [[67, 0, .18], [72, .2, .18], [76, .4, .18], [79, .6, .5], [76, 1.15, .16], [79, 1.33, .16], [84, 1.52, 1.1]];
+    seq.forEach(([n, st, du]) => {
+      const fq = 440 * Math.pow(2, (n - 69) / 12);
+      [0, 7].forEach((det, i) => {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fq; o.detune.value = i ? 6 : -4;
+        const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2200;
+        const g = ctx.createGain(); const t = t0 + st;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.07, t + 0.03); g.gain.setValueAtTime(0.07, t + du * 0.8); g.gain.linearRampToValueAtTime(0, t + du);
+        o.connect(f); f.connect(g); g.connect(this.master); o.start(t); o.stop(t + du + 0.05);
+      });
+    });
+  },
+  set(name, v, tc = 0.2) { if (this.ctx && this.loops[name]) this.loops[name].gain.setTargetAtTime(v, this.ctx.currentTime, tc); },
+  stopAll() { ['wind', 'crowd', 'rumble'].forEach(n => this.set(n, 0, 0.3)); },
+};
+
+// ---------- Three.js シーン ----------
+const canvas = $('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+const scene = new THREE.Scene();
+const FOG = 0xd9e6ea;
+scene.fog = new THREE.Fog(FOG, 260, 2300);
+scene.background = new THREE.Color(FOG);
+const fpCam = new THREE.PerspectiveCamera(72, 1, 0.08, 5000);
+fpCam.rotation.order = 'YXZ';
+const menuCam = new THREE.PerspectiveCamera(50, 1, 1, 6000);
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+function canvasTex(w, h, draw, rep) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; }
+  t.anisotropy = maxAniso;
+  return t;
+}
+const matCache = {};
+const lam = (color, extra) => { const k = color + (extra ? JSON.stringify(extra) : ''); return matCache[k] || (matCache[k] = new THREE.MeshLambertMaterial(Object.assign({ color }, extra || {}))); };
+
+scene.add(new THREE.HemisphereLight(0xe8f2ff, 0x4a6a3a, 0.85));
+const sun = new THREE.DirectionalLight(0xfff3dc, 0.85); sun.position.set(-300, 500, -200); scene.add(sun);
+
+// 空
+const sky = new THREE.Mesh(new THREE.SphereGeometry(4000, 24, 12), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  uniforms: { top: { value: new THREE.Color(0x3f82d0) }, bot: { value: new THREE.Color(FOG) } },
+  vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: 'uniform vec3 top; uniform vec3 bot; varying vec3 vP; void main(){ float h = clamp(vP.y*1.8, 0.0, 1.0); gl_FragColor = vec4(mix(bot, top, pow(h, 0.65)), 1.0); }',
+}));
+scene.add(sky);
+// 雲
+{
+  const cm = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false, transparent: true, opacity: 0.9 });
+  for (let i = 0; i < 16; i++) {
+    const g = new THREE.Group(); const a = Math.random() * Math.PI * 2, r = rand(1400, 2600);
+    g.position.set(Math.cos(a) * r, rand(420, 700), Math.sin(a) * r);
+    for (let j = 0; j < 5; j++) { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), cm); m.scale.set(rand(60, 120), rand(22, 40), rand(50, 90)); m.position.set(rand(-120, 120), rand(-10, 20), rand(-60, 60)); g.add(m); }
+    sky.add(g);
+  }
+}
+
+// 地面
+const grassTex = canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#3c7736'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1400; i++) { g.fillStyle = `hsla(${rand(90, 120)},45%,${rand(22, 40)}%,.6)`; g.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5); }
+}, true);
+grassTex.repeat.set(260, 260);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), new THREE.MeshLambertMaterial({ map: grassTex }));
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+function ribbon(d0, d1, y0, y1, step, vScale, mat, uMax = 1) {
+  const n = Math.ceil(TRK.LAP / step), pos = [], uv = [], idx = [];
+  for (let i = 0; i <= n; i++) {
+    const s = i * TRK.LAP / n, a = trackPos(s, d0), b = trackPos(s, d1);
+    pos.push(a.x, y0, a.z, b.x, y1, b.z);
+    uv.push(0, s / vScale, uMax, s / vScale);
+    if (i < n) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, mat); scene.add(m); return m;
+}
+const turfTex = canvasTex(128, 256, (g, w, h) => {
+  g.fillStyle = '#3f9a3c'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#4aa845'; g.fillRect(0, 0, w, h / 2);
+  for (let i = 0; i < 2600; i++) { g.fillStyle = `hsla(${rand(95, 125)},50%,${rand(28, 46)}%,.55)`; g.fillRect(Math.random() * w, Math.random() * h, 1.2, 2.5); }
+}, true);
+ribbon(-0.3, TRK.W + 0.4, 0.03, 0.03, 2, 18, new THREE.MeshLambertMaterial({ map: turfTex, side: THREE.DoubleSide }), 3);
+const dirtTex = canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#8a6844'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1800; i++) { g.fillStyle = `hsla(30,${rand(25, 45)}%,${rand(28, 50)}%,.6)`; g.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5); }
+}, true);
+ribbon(-24, -3, 0.025, 0.025, 3, 20, new THREE.MeshLambertMaterial({ map: dirtTex, side: THREE.DoubleSide }), 3);
+// ラチ
+const railMat = new THREE.MeshLambertMaterial({ color: 0xf6f7f3, side: THREE.DoubleSide });
+function rail(d) {
+  ribbon(d, d, 0.92, 1.08, 3, 10, railMat);
+  const n = Math.floor(TRK.LAP / 4), im = new THREE.InstancedMesh(new THREE.BoxGeometry(0.08, 1, 0.08), railMat, n), m4 = new THREE.Matrix4();
+  for (let i = 0; i < n; i++) { const p = trackPos(i * 4, d); m4.makeTranslation(p.x, 0.5, p.z); im.setMatrixAt(i, m4); }
+  im.instanceMatrix.needsUpdate = true; scene.add(im);
+}
+rail(-0.25); rail(TRK.W + 0.45); rail(-2.6); rail(-24.4);
+// 内馬場の池と木
+{
+  const pond = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshPhongMaterial({ color: 0x3f7fa8, shininess: 80, specular: 0x88aacc }));
+  pond.rotation.x = -Math.PI / 2; pond.scale.set(150, 58, 1); pond.position.set(-10, 0.06, 10); scene.add(pond);
+  const trees = [];
+  for (let i = 0; i < 70; i++) {
+    const x = rand(-300, 300), z = rand(-110, 110);
+    if (((x + 10) / 165) ** 2 + ((z - 10) / 68) ** 2 < 1) continue;
+    const sOut = Math.hypot(Math.max(0, Math.abs(x) - TRK.S / 2), z);
+    if (sOut > TRK.R - 30) continue;
+    trees.push([x, z, rand(0.7, 1.3)]);
+  }
+  for (let i = 0; i < 260; i++) {
+    const a = Math.random() * Math.PI * 2, r = rand(470, 900);
+    const x = Math.cos(a) * r * 1.35, z = Math.sin(a) * r;
+    if (z < -150 && z > -330 && x > -260 && x < 320) continue;
+    trees.push([x, z, rand(0.8, 1.6)]);
+  }
+  const cone = new THREE.ConeGeometry(4, 12, 7); cone.translate(0, 9, 0);
+  const trunk = new THREE.CylinderGeometry(0.5, 0.7, 4, 5); trunk.translate(0, 2, 0);
+  const im1 = new THREE.InstancedMesh(cone, lam(0x2b5a2c), trees.length), im2 = new THREE.InstancedMesh(trunk, lam(0x5a4030), trees.length);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3();
+  trees.forEach(([x, z, s], i) => { m4.compose(new THREE.Vector3(x, 0, z), q, v.set(s, s * rand(0.9, 1.2), s)); im1.setMatrixAt(i, m4); im2.setMatrixAt(i, m4); });
+  scene.add(im1, im2);
+  // 遠景の山
+  const mm = lam(0x7b95ab);
+  for (let i = 0; i < 22; i++) {
+    const a = i / 22 * Math.PI * 2 + rand(-0.1, 0.1), r = rand(1700, 2100);
+    const m = new THREE.Mesh(new THREE.ConeGeometry(rand(220, 420), rand(160, 330), 6), mm);
+    m.position.set(Math.cos(a) * r, 60, Math.sin(a) * r); scene.add(m);
+  }
+}
+// スタンド（ホームストレッチの外側）
+{
+  const zr = -(TRK.R + TRK.W + 0.5);
+  const apron = new THREE.Mesh(new THREE.PlaneGeometry(460, 18), lam(0xa9aca4));
+  apron.rotation.x = -Math.PI / 2; apron.position.set(40, 0.04, zr - 12); scene.add(apron);
+  const crowdTex = canvasTex(512, 256, (g, w, h) => {
+    g.fillStyle = '#39404a'; g.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 8) {
+      g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, y + 6, w, 2);
+      for (let x = 0; x < w; x += 5) { if (Math.random() < 0.12) continue; g.fillStyle = `hsl(${Math.random() * 360},${rand(20, 70)}%,${rand(35, 80)}%)`; g.fillRect(x + rand(0, 1), y + rand(0, 2), 3.5, 5); }
+    }
+  }, true);
+  crowdTex.repeat.set(12, 5);
+  const W = 420, cx = 45, z0 = zr - 22, depth = 46, hgt = 24;
+  const slope = new THREE.Mesh(new THREE.PlaneGeometry(W, Math.hypot(depth, hgt)), new THREE.MeshLambertMaterial({ map: crowdTex }));
+  slope.rotation.x = -Math.atan2(depth, hgt); slope.position.set(cx, 4 + hgt / 2, z0 - depth / 2); scene.add(slope);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(W, 4, 6), lam(0xd8d6cf)); base.position.set(cx, 2, z0 + 1); scene.add(base);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(W, 40, 4), lam(0xc9c7bf)); back.position.set(cx, 20, z0 - depth - 2); scene.add(back);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(W + 10, 1.5, depth + 16), lam(0xeeeeea)); roof.position.set(cx, 40, z0 - depth / 2 + 4); roof.rotation.x = -0.06; scene.add(roof);
+  for (let i = 0; i <= 12; i++) { const c = new THREE.Mesh(new THREE.BoxGeometry(1.2, 36, 1.2), lam(0xdcdad3)); c.position.set(cx - W / 2 + i * W / 12, 22, z0 - 4); scene.add(c); }
+  // 大型ビジョン
+  const vis = new THREE.Mesh(new THREE.BoxGeometry(70, 16, 2), lam(0x14181c)); vis.position.set(-20, 18, TRK.R - 70); scene.add(vis);
+  const visFace = new THREE.Mesh(new THREE.PlaneGeometry(66, 13), new THREE.MeshBasicMaterial({ map: canvasTex(512, 100, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#0d3b2a'); gr.addColorStop(1, '#16563b'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#ffb21e'; g.font = 'bold 54px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('人馬一体', w / 2, h / 2 + 3);
+  }) }));
+  visFace.position.set(-20, 18, TRK.R - 71.1); visFace.rotation.y = Math.PI; scene.add(visFace);
+  const legs = new THREE.Mesh(new THREE.BoxGeometry(3, 12, 3), lam(0x444a50)); legs.position.set(-20, 5, TRK.R - 70); scene.add(legs);
+}
+// ゴール板とハロン棒
+function placeAt(obj, s, d, y = 0) { const p = trackPos(s, d); obj.position.set(p.x, y, p.z); obj.rotation.y = Math.PI / 2 - p.h; scene.add(obj); return obj; }
+{
+  const discTex = canvasTex(128, 128, (g) => { g.fillStyle = '#d6202a'; g.beginPath(); g.arc(64, 64, 62, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(64, 64, 50, 0, 7); g.fill(); g.fillStyle = '#d6202a'; g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('GOAL', 64, 66); });
+  [[-0.8, 1], [TRK.W + 1.4, 1]].forEach(([d]) => {
+    const g = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 5.2, 8), lam(0xffffff)); pole.position.y = 2.6; g.add(pole);
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.9, 32), new THREE.MeshBasicMaterial({ map: discTex, side: THREE.DoubleSide })); disc.position.set(0, 5.6, 0); disc.rotation.y = Math.PI; g.add(disc);
+    placeAt(g, TRK.FIN, d);
+  });
+  const line = new THREE.Mesh(new THREE.PlaneGeometry(TRK.W + 0.6, 0.2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 }));
+  line.rotation.x = -Math.PI / 2; const lg = new THREE.Group(); line.position.set((TRK.W) / 2, 0.05, 0); lg.add(line); placeAt(lg, TRK.FIN, 0);
+  const stripeTex = canvasTex(8, 64, (g) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#fff' : '#d6202a'; g.fillRect(0, i * 8, 8, 8); } });
+  for (let r = 200; r <= 1600; r += 200) {
+    const g = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 3.2, 8), new THREE.MeshLambertMaterial({ map: stripeTex })); pole.position.y = 1.6; g.add(pole);
+    const plTex = canvasTex(128, 64, (c) => { c.fillStyle = '#fff'; c.fillRect(0, 0, 128, 64); c.fillStyle = '#c21820'; c.font = 'bold 44px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(r), 64, 34); });
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 0.05), [lam(0xffffff), lam(0xffffff), lam(0xffffff), lam(0xffffff), new THREE.MeshBasicMaterial({ map: plTex }), new THREE.MeshBasicMaterial({ map: plTex })]);
+    plate.position.set(0.2, 3.35, 0); plate.rotation.y = Math.PI; g.add(plate);
+    placeAt(g, TRK.FIN - r, -0.7);
+  }
+}
+
+// ---------- 馬のモデル ----------
+const GEO = {
+  body: new THREE.SphereGeometry(1, 14, 10),
+  leg: (() => { const g = new THREE.CylinderGeometry(0.08, 0.06, 0.62, 6); g.translate(0, -0.31, 0); return g; })(),
+  legLow: (() => { const g = new THREE.CylinderGeometry(0.055, 0.05, 0.6, 6); g.translate(0, -0.3, 0); return g; })(),
+  hoof: new THREE.CylinderGeometry(0.07, 0.085, 0.1, 6),
+  neck: (() => { const g = new THREE.CylinderGeometry(0.16, 0.27, 1.05, 10); g.translate(0, 0.52, 0); return g; })(),
+  head: new THREE.BoxGeometry(0.24, 0.28, 0.66),
+  ear: (() => { const g = new THREE.ConeGeometry(0.045, 0.17, 5); g.translate(0, 0.085, 0); return g; })(),
+  tail: (() => { const g = new THREE.CylinderGeometry(0.04, 0.12, 0.85, 6); g.translate(0, -0.42, 0); return g; })(),
+  box: new THREE.BoxGeometry(1, 1, 1),
+  sphere: new THREE.SphereGeometry(1, 10, 8),
+  plane: new THREE.PlaneGeometry(1, 1),
+};
+const shadowTex = canvasTex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 2, 32, 32, 31); gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+const shadowMat = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false });
+function numTex(no, waku) {
+  return canvasTex(128, 96, (g, w, h) => {
+    g.fillStyle = '#f7f7f2'; g.fillRect(0, 0, w, h);
+    g.fillStyle = WAKU_STR[waku]; g.fillRect(0, 0, w, 12);
+    g.fillStyle = '#111'; g.font = 'bold 64px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(no), w / 2, h / 2 + 8);
+  });
+}
+function buildHorse(r) {
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const coat = lam(r.def.coat), dark = lam(0x17100b);
+  const add = (parent, geo, mat, pos, scl, rot) => { const m = new THREE.Mesh(geo, mat); if (pos) m.position.set(...pos); if (scl) m.scale.set(...scl); if (rot) m.rotation.set(...rot); parent.add(m); return m; };
+  add(body, GEO.body, coat, [0, 1.38, 0], [0.4, 0.46, 1.0]);
+  add(body, GEO.body, coat, [0, 1.42, 0.62], [0.38, 0.44, 0.45]);
+  add(body, GEO.body, coat, [0, 1.45, -0.62], [0.41, 0.46, 0.5]);
+  const neck = new THREE.Group(); neck.position.set(0, 1.55, 0.85); neck.rotation.x = 0.75; body.add(neck);
+  add(neck, GEO.neck, coat);
+  add(neck, GEO.box, dark, [0, 0.55, -0.17], [0.06, 1.0, 0.08]);
+  const head = new THREE.Group(); head.position.set(0, 1.0, 0.02); head.rotation.x = -0.23; neck.add(head);
+  add(head, GEO.head, coat, [0, 0, 0.24]);
+  add(head, GEO.ear, coat, [0.07, 0.13, -0.02], null, [-0.35, 0, 0.15]);
+  add(head, GEO.ear, coat, [-0.07, 0.13, -0.02], null, [-0.35, 0, -0.15]);
+  const legs = [];
+  [[0.2, 1.2, 0.62], [-0.2, 1.2, 0.62], [0.2, 1.25, -0.62], [-0.2, 1.25, -0.62]].forEach((p, i) => {
+    const hip = new THREE.Group(); hip.position.set(...p); body.add(hip);
+    add(hip, GEO.leg, coat);
+    const knee = new THREE.Group(); knee.position.y = -0.6; hip.add(knee);
+    add(knee, GEO.legLow, i < 2 && r.def.coat === COATS.kage ? dark : coat);
+    add(knee, GEO.hoof, dark, [0, -0.62, 0]);
+    legs.push({ hip, knee, off: [2.3, 2.85, 0, 0.55][i], front: i < 2 });
+  });
+  const tail = new THREE.Group(); tail.position.set(0, 1.62, -1.05); tail.rotation.x = 0.6; body.add(tail);
+  add(tail, GEO.tail, dark);
+  const nt = new THREE.MeshBasicMaterial({ map: numTex(r.no, r.waku) });
+  add(body, GEO.plane, nt, [0.415, 1.33, 0.05], [0.72, 0.5, 1], [0, Math.PI / 2, 0]);
+  add(body, GEO.plane, nt, [-0.415, 1.33, 0.05], [0.72, 0.5, 1], [0, -Math.PI / 2, 0]);
+  // 騎手
+  const jk = new THREE.Group(); jk.position.set(0, 1.88, 0.2); body.add(jk);
+  const silk = lam(r.def.silk[0]), silk2 = lam(r.def.silk[1]);
+  add(jk, GEO.box, silk, [0, 0.22, 0.05], [0.38, 0.28, 0.56], [0.25, 0, 0]);
+  add(jk, GEO.box, silk2, [0, 0.23, 0.05], [0.39, 0.1, 0.57], [0.25, 0, 0]);
+  add(jk, GEO.sphere, lam(WAKU_HEX[r.waku]), [0, 0.42, 0.42], [0.13, 0.13, 0.14]);
+  add(jk, GEO.box, silk, [0.17, 0.14, 0.45], [0.08, 0.08, 0.42], [0.5, 0, 0]);
+  add(jk, GEO.box, silk, [-0.17, 0.14, 0.45], [0.08, 0.08, 0.42], [0.5, 0, 0]);
+  add(jk, GEO.box, lam(0xf2f2ee), [0.22, -0.02, 0.05], [0.11, 0.11, 0.42], [-0.5, 0, 0]);
+  add(jk, GEO.box, lam(0xf2f2ee), [-0.22, -0.02, 0.05], [0.11, 0.11, 0.42], [-0.5, 0, 0]);
+  add(jk, GEO.box, dark, [0.25, -0.2, 0.2], [0.09, 0.26, 0.1]);
+  add(jk, GEO.box, dark, [-0.25, -0.2, 0.2], [0.09, 0.26, 0.1]);
+  const sh = add(g, GEO.plane, shadowMat, [0, 0.05, 0], [1.3, 2.9, 1], [-Math.PI / 2, 0, 0]);
+  return { g, body, neck, tail, legs, sh };
+}
+function animateHorse(m, r) {
+  const ph = r.stride * Math.PI * 2, amp = Math.min(1, r.v / 8);
+  for (const L of m.legs) {
+    const a = Math.sin(ph + L.off);
+    L.hip.rotation.x = a * 0.62 * amp;
+    L.knee.rotation.x = (L.front ? -1 : 1) * Math.max(0, Math.sin(ph + L.off + 1.3)) * 0.9 * amp;
+  }
+  m.body.position.y = Math.abs(Math.sin(ph)) * 0.08 * amp;
+  m.body.rotation.x = Math.sin(ph) * 0.045 * amp;
+  m.neck.rotation.x = 0.75 + Math.sin(ph + 1) * 0.09 * amp;
+  m.tail.rotation.x = 0.6 + amp * 0.5 + Math.sin(ph * 2) * 0.05;
+}
+
+// 一人称リグ（馬の首・耳・手綱・ムチ）
+const fp = (() => {
+  const rig = new THREE.Group(), bob = new THREE.Group(); rig.add(bob); scene.add(rig);
+  const coat = new THREE.MeshLambertMaterial({ color: 0x7a4a26 }), mane = lam(0x1b120c);
+  const orient = (m, a, b) => { const d = new THREE.Vector3().subVectors(b, a); m.position.copy(a).addScaledVector(d, 0.5); m.scale.y = d.length(); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); };
+  const neckGeo = new THREE.CylinderGeometry(0.16, 0.3, 1, 14);
+  const neck = new THREE.Mesh(neckGeo, coat); orient(neck, new THREE.Vector3(0, 1.58, 0.35), new THREE.Vector3(0, 1.9, 1.58)); bob.add(neck);
+  for (let i = 0; i < 10; i++) {
+    const t = i / 9, m = new THREE.Mesh(GEO.box, mane);
+    m.position.set((i % 2 ? 0.03 : -0.03), 1.62 + t * 0.32 + 0.27 - t * 0.12, 0.35 + t * 1.2);
+    m.scale.set(0.07, 0.1, 0.16); m.rotation.x = -0.25; m.rotation.z = (i % 2 ? 0.3 : -0.3); bob.add(m);
+  }
+  const head = new THREE.Group(); head.position.set(0, 1.88, 1.66); head.rotation.x = 0.5; bob.add(head);
+  const hm = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.3, 0.72), coat); hm.position.z = 0.3; head.add(hm);
+  const blaze = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.5), lam(0xf4f1ea)); blaze.position.set(0, 0.155, 0.32); head.add(blaze);
+  const earL = new THREE.Group(), earR = new THREE.Group();
+  earL.position.set(0.09, 0.14, 0.04); earR.position.set(-0.09, 0.14, 0.04); head.add(earL, earR);
+  const earGeo = new THREE.ConeGeometry(0.068, 0.3, 8); earGeo.scale(1, 1, 0.6); earGeo.translate(0, 0.15, 0);
+  const earIn = new THREE.ConeGeometry(0.04, 0.22, 6); earIn.scale(1, 1, 0.4); earIn.translate(0, 0.13, 0.02);
+  earL.add(new THREE.Mesh(earGeo, coat), new THREE.Mesh(earIn, lam(0x2a1a12))); earR.add(new THREE.Mesh(earGeo, coat), new THREE.Mesh(earIn, lam(0x2a1a12)));
+  const fore = new THREE.Mesh(GEO.box, mane); fore.position.set(0, 0.17, 0.12); fore.scale.set(0.1, 0.04, 0.16); head.add(fore);
+  const glove = lam(0xeeeeea), rein = lam(0x3a2414);
+  const handL = new THREE.Mesh(GEO.box, glove), handR = new THREE.Mesh(GEO.box, glove);
+  handL.scale.set(0.09, 0.08, 0.12); handR.scale.set(0.09, 0.08, 0.12);
+  handL.position.set(0.17, 1.98, 0.78); handR.position.set(-0.17, 1.98, 0.78); bob.add(handL, handR);
+  const reinGeo = new THREE.CylinderGeometry(0.011, 0.011, 1, 5);
+  const bitL = new THREE.Vector3(0.13, 1.7, 1.98), bitR = new THREE.Vector3(-0.13, 1.7, 1.98);
+  const rL = new THREE.Mesh(reinGeo, rein), rR = new THREE.Mesh(reinGeo, rein); bob.add(rL, rR);
+  const whipPiv = new THREE.Group(); whipPiv.position.set(-0.17, 1.98, 0.78); bob.add(whipPiv);
+  const whipM = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.016, 0.75, 5), lam(0x111111)); whipM.position.set(0, -0.1, -0.33); whipM.rotation.x = 1.3; whipPiv.add(whipM);
+  const cam = fpCam; rig.add(cam);
+  return {
+    rig, bob, earL, earR, head, handL, handR, rL, rR, whipPiv, coat,
+    updateReins(tension) {
+      const pull = tension * 0.14;
+      handL.position.z = handR.position.z = 0.8 - pull; whipPiv.position.z = 0.8 - pull;
+      orient(rL, handL.position.clone().add(new THREE.Vector3(0, 0, 0.04)), bitL);
+      orient(rR, handR.position.clone().add(new THREE.Vector3(0, 0, 0.04)), bitR);
+    },
+  };
+})();
+
+// ---------- ゲート ----------
+let gateGroup = null, gateDoors = [];
+function buildGate(race) {
+  if (gateGroup) scene.remove(gateGroup);
+  gateGroup = new THREE.Group(); gateDoors = []; scene.add(gateGroup);
+  const frame = lam(0xdfe5dc), door = lam(0x2f7d52), top = lam(0x2f7d52);
+  for (let i = 0; i < race.N; i++) {
+    const d = 1.2 + i * 1.35, p = trackPos(race.startS, d);
+    const st = new THREE.Group(); st.position.set(p.x, 0, p.z); st.rotation.y = Math.PI / 2 - p.h; gateGroup.add(st);
+    const wall = new THREE.Mesh(GEO.box, frame); wall.scale.set(0.1, 2.5, 3.2); wall.position.set(0.675, 1.25, -1.6); st.add(wall);
+    if (i === 0) { const w2 = wall.clone(); w2.position.x = -0.675; st.add(w2); }
+    const beam = new THREE.Mesh(GEO.box, top); beam.scale.set(1.35, 0.4, 3.3); beam.position.set(0, 2.75, -1.6); st.add(beam);
+    const nTex = numTex(i + 1, wakuOf(i + 1, race.N));
+    const plate = new THREE.Mesh(GEO.plane, new THREE.MeshBasicMaterial({ map: nTex })); plate.scale.set(0.6, 0.42, 1); plate.position.set(0, 2.75, 0.06); st.add(plate);
+    [[0.675, -0.33, 1], [-0.675, 0.33, -1]].forEach(([px, off, sgn]) => {
+      const piv = new THREE.Group(); piv.position.set(px, 0, 0); st.add(piv);
+      const dm = new THREE.Mesh(GEO.box, door); dm.scale.set(0.64, 1.35, 0.05); dm.position.set(off, 1.05, 0); piv.add(dm);
+      gateDoors.push({ piv, sgn });
+    });
+  }
+}
+
+// ---------- ゲーム状態 ----------
+const sel = { course: 'classic', horse: 'hoshi', diff: 'normal', ground: 'ryo' };
+let state = 'menu', paused = false, race = null, models = new Map(), gateOpenT = 0;
+const keys = { up: false, down: false, left: false, right: false, soothe: false, back: false };
+let lookBack = 0, lastPhase = 0, whipAnim = 0, finishShownAt = 0, flags = {}, tickerQ = [], tickerT = 0, alertT = 0, hudT = 0;
+const VIS = 2.0;
+
+function startRace() {
+  Snd.init();
+  const course = COURSES.find(c => c.id === sel.course), def = PLAYER_HORSES.find(h => h.id === sel.horse);
+  race = createRace(course, sel.diff, sel.ground, def);
+  race.emit = onRaceEvent;
+  models.forEach(m => scene.remove(m.g)); models.clear();
+  for (const r of race.runners) if (!r.isPlayer) { const m = buildHorse(r); scene.add(m.g); models.set(r, m); }
+  fp.coat.color.setHex(def.coat);
+  buildGate(race);
+  gateOpenT = 0; flags = {}; tickerQ = []; lookBack = 0; whipAnim = 0; finishShownAt = 0;
+  race.openAt = 5.2 + rand(0.4, 2.2);
+  state = 'gate'; paused = false;
+  $('menu').hidden = true; $('result').hidden = true; $('hud').hidden = false; $('pause').hidden = true;
+  $('riName').textContent = `${course.name}（${course.grade}）`;
+  $('riMeta').textContent = `芝${course.D}m・右 ／ 馬場:${race.ground.label} ／ ${race.diff.label}`;
+  const p = race.player;
+  $('hpName').textContent = `${CIRC[p.no - 1]} ${p.name}`;
+  $('hpStyle').textContent = STYLES[p.style].label; $('hpTemper').textContent = TEMPERS[p.temper].label;
+  $('whips').innerHTML = Array.from({ length: p.whipsMax }, () => '<i></i>').join('');
+  $('feints').innerHTML = 'フリ ' + Array.from({ length: p.feintsMax }, () => '<i></i>').join('');
+  $('chatlog').innerHTML = ''; $('bubbles').innerHTML = ''; bubbles.clear(); chatLast.clear();
+  $('form').innerHTML = race.runners.map(r => `<span class="fc${r.isPlayer ? ' me' : ''}" data-no="${r.no}"${r.tactic ? ` data-t="${RIVALS[r.tactic].name}"` : ''} style="background:${WAKU_CSS[r.waku]};color:${WAKU_TXT[r.waku]}">${r.no}</span>`).join('');
+  const gc = $('gatecard');
+  gc.innerHTML = `<h3>${CIRC[p.no - 1]} ${p.name}</h3>
+    <div class="gc-meta">${p.no}番ゲート ／ ${STYLES[p.style].label}・${TEMPERS[p.temper].label} ／ 理想の位置：${STYLES[p.style].where}</div>
+    <div class="gc-plan">${def.plan}</div>
+    <div class="gc-rivals">${race.rivals.map(r => `<div><b>${RIVALS[r.tactic].full}</b>（${RIVALS[r.tactic].title}）${CIRC[r.no - 1]}${r.name}<br><span>${RIVALS[r.tactic].desc} → ${RIVALS[r.tactic].counter}</span></div>`).join('')}</div>
+    <div class="gc-cue">ゲートが開いた瞬間に ↑（またはムチ）で好スタート</div>`;
+  gc.hidden = false;
+  say('各馬、ゲートイン。');
+  Snd.fanfare();
+  Snd.set('crowd', 0.05, 1);
+  resize();
+}
+
+function onRaceEvent(type, r) {
+  if (!race) return;
+  if (type === 'kakari' && r.isPlayer) { flash('掛かった！', 'bad', 'X でなだめる／前に馬を置く'); }
+  if (type === 'calm' && r.isPlayer) say(`${r.name}、落ち着きを取り戻した。`);
+  if (type === 'chat') { showChat(r.r, r.text); return; }
+  if (type === 'pace') {
+    const tip = r.kind === 'slow' ? '前が止まらない展開、早めに動け' : r.kind === 'high' ? '前がバテる展開、差し・追込に向く' : '';
+    say(`前半${r.splitD}m通過 ${r.time.toFixed(1)}秒、${r.label}！`);
+    if (tip) flash(r.label, r.kind === 'slow' ? 'led' : 'good', tip);
+    return;
+  }
+  if (type === 'finish' && race.order[0] === r && !flags.winner) { flags.winner = true; say(`${tag(r)}、1着でゴールイン！`); Snd.set('crowd', 0.45, 0.2); }
+}
+
+const bubbles = new Map(), chatLast = new Map();
+function showChat(r, text) {
+  const now = performance.now();
+  if (chatLast.has(r) && now - chatLast.get(r) < 3500) return;
+  chatLast.set(r, now);
+  const who = r.tactic ? r.jockey : `${r.no}番の騎手`;
+  const log = $('chatlog');
+  const line = document.createElement('div'); line.className = 'cl';
+  line.innerHTML = `<b>${who}</b>「${text}」`;
+  log.prepend(line);
+  [...log.children].forEach((c, i) => { c.classList.toggle('old', i > 0); if (i > 2) c.remove(); });
+  let b = bubbles.get(r);
+  if (!b) { b = { el: document.createElement('div') }; b.el.className = 'bubble'; $('bubbles').appendChild(b.el); bubbles.set(r, b); }
+  b.el.className = 'bubble' + (r.tactic ? '' : ' plain');
+  b.el.innerHTML = `<b>${who}</b>${text}`;
+  b.until = now + 3000;
+}
+const _v3 = new THREE.Vector3();
+function placeBubbles(now) {
+  const w = innerWidth, h = innerHeight;
+  for (const [r, b] of bubbles) {
+    const m = models.get(r);
+    if (!m || now > b.until) { b.el.hidden = true; continue; }
+    _v3.set(0, 3.1, 0); m.g.localToWorld(_v3); _v3.project(fpCam);
+    const vis = _v3.z < 1 && Math.abs(_v3.x) < 1.05 && Math.abs(_v3.y) < 1.05;
+    b.el.hidden = !vis;
+    if (vis) b.el.style.transform = `translate(${(_v3.x + 1) / 2 * w}px, ${(1 - _v3.y) / 2 * h}px) translate(-50%,-100%)`;
+  }
+}
+function say(text) { tickerQ.push(text); if (tickerQ.length > 3) tickerQ.shift(); }
+function flash(text, cls = '', sub = '') {
+  const a = $('alert'); a.className = cls; a.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
+  void a.offsetWidth; a.classList.add('show'); alertT = 1.8;
+}
+
+function playerStartPress() {
+  if (!race || state !== 'gate' && state !== 'race') return;
+  const p = race.player;
+  if (p.startDelay !== Infinity) return;
+  if (race.t < race.openAt) {
+    if (race.t > 1.5) { p.startDelay = rand(0.9, 1.2); p.mood -= 8; flash('立ち上がった！', 'bad', '出遅れ'); say(`${tag(p)}、ゲートで立ち上がって出遅れた！`); }
+    return;
+  }
+  const react = race.t - race.openAt;
+  let extra = p.temper === 'okubyo' ? 0.15 : 0;
+  if (react <= 0.25) { p.startDelay = react + extra; p.v = 3.5; p.mood += 8; flash('好スタート！', 'good'); }
+  else { p.startDelay = react + 0.1 + extra; }
+}
+
+function onKey(e, down) {
+  const k = e.code;
+  const map = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
+    KeyX: 'soothe', ShiftLeft: 'soothe', ShiftRight: 'soothe', KeyV: 'back', KeyC: 'back' };
+  if (state === 'menu' || state === 'result') return;
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(k)) e.preventDefault();
+  if (down && (k === 'KeyP' || k === 'Escape')) { togglePause(); return; }
+  if (down && k === 'KeyM') { Snd.setMuted(!Snd.muted); return; }
+  if (map[k]) { keys[map[k]] = down; if (down && map[k] === 'up' && !e.repeat) playerStartPress(); }
+  if (down && k === 'Space' && !e.repeat) doWhip();
+  if (down && k === 'KeyF' && !e.repeat) doFeint();
+}
+function doFeint() {
+  if (!race || paused || state !== 'race') return;
+  const p = race.player;
+  if (p.feints <= 0) { flash('フェイントはもう使えない', 'bad'); return; }
+  const res = p.feint(race);
+  if (res === 'late') { flash('もう勝負どころ', 'bad', 'フェイントは直線前まで'); return; }
+  if (res === 'none') { flash('近くに馬がいない', 'bad', 'フェイントは他馬のそばで（回数は減らない）'); return; }
+  if (!res) return;
+  const named = res.filter(o => o.tactic).map(o => o.jockey);
+  if (res.length) flash('釣った！', 'good', `${named.length ? named.join('・') : ''}${named.length && res.length > named.length ? ' ほか' : ''}${res.length}頭が動いた`);
+  else flash('だれも釣られない', 'bad', '近くに馬がいないと効かない');
+}
+addEventListener('keydown', e => onKey(e, true));
+addEventListener('keyup', e => onKey(e, false));
+addEventListener('blur', () => { Object.keys(keys).forEach(k => keys[k] = false); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && (state === 'race' || state === 'gate') && !paused) togglePause(); });
+
+function doWhip() {
+  if (!race || paused) return;
+  const p = race.player;
+  if (p.startDelay === Infinity) { playerStartPress(); return; }
+  if (state !== 'race' || p.finished) return;
+  const res = p.whip(race);
+  if (!res) { if (p.whips <= 0) flash('ムチはもう無い', 'bad'); return; }
+  whipAnim = 1; Snd.whip();
+  if (res === 'early') flash('早すぎるムチ', 'bad', `まだ残り${Math.round(race.D - p.p)}m。馬がイヤがっている`);
+  else if (res === 'sulk') flash('ヘソを曲げた…', 'bad', 'ムチの打ちすぎ');
+}
+
+function togglePause() {
+  if (state !== 'race' && state !== 'gate') return;
+  paused = !paused; $('pause').hidden = !paused;
+  if (paused) { Snd.stopAll(); if (Snd.ctx) Snd.ctx.suspend(); } else if (Snd.ctx) Snd.ctx.resume();
+}
+$('pauseBtn').addEventListener('click', togglePause);
+$('resumeBtn').addEventListener('click', togglePause);
+$('quitBtn').addEventListener('click', () => { paused = false; $('pause').hidden = true; toMenu(); });
+
+// タッチ操作
+if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window) document.body.classList.add('touch');
+document.querySelectorAll('#touch button').forEach(b => {
+  const k = b.dataset.k;
+  const on = e => { e.preventDefault(); b.classList.add('on'); if (k === 'whip') doWhip(); else if (k === 'feint') doFeint(); else { keys[k] = true; if (k === 'up') playerStartPress(); } };
+  const off = e => { e.preventDefault(); b.classList.remove('on'); if (k !== 'whip' && k !== 'feint') keys[k] = false; };
+  b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
+});
+
+// ---------- ミニマップ ----------
+const mm = $('minimap'), mctx = mm.getContext('2d');
+const mmBase = document.createElement('canvas'); mmBase.width = mm.width; mmBase.height = mm.height;
+const mmScale = Math.min((mm.width - 24) / (TRK.S + 2 * (TRK.R + TRK.W)), (mm.height - 24) / (2 * (TRK.R + TRK.W)));
+const mmXY = (s, d) => { const p = trackPos(s, d); return [mm.width / 2 + p.x * mmScale, mm.height / 2 + p.z * mmScale]; };
+{
+  const g = mmBase.getContext('2d');
+  g.fillStyle = 'rgba(6,14,10,.78)'; g.strokeStyle = 'rgba(170,210,185,.16)';
+  g.beginPath(); g.roundRect ? g.roundRect(0.5, 0.5, mm.width - 1, mm.height - 1, 10) : g.rect(0.5, 0.5, mm.width - 1, mm.height - 1); g.fill(); g.stroke();
+  g.lineWidth = TRK.W * mmScale; g.strokeStyle = '#2f7a44'; g.beginPath();
+  for (let s = 0; s <= TRK.LAP; s += 10) { const [x, y] = mmXY(s, TRK.W / 2); s ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.closePath(); g.stroke();
+  g.lineWidth = 1.5; g.strokeStyle = 'rgba(255,255,255,.7)'; g.beginPath();
+  for (let s = 0; s <= TRK.LAP; s += 10) { const [x, y] = mmXY(s, 0); s ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.closePath(); g.stroke();
+  const [fx1, fy1] = mmXY(TRK.FIN, -3), [fx2, fy2] = mmXY(TRK.FIN, TRK.W + 3);
+  g.strokeStyle = '#ffb21e'; g.lineWidth = 3; g.beginPath(); g.moveTo(fx1, fy1); g.lineTo(fx2, fy2); g.stroke();
+  g.fillStyle = '#ffb21e'; g.font = '18px DotGothic16, monospace'; g.fillText('GOAL', fx1 - 20, fy2 + 20);
+}
+function drawMinimap() {
+  mctx.clearRect(0, 0, mm.width, mm.height); mctx.drawImage(mmBase, 0, 0);
+  if (!race) return;
+  const list = race.runners.slice().sort((a, b) => a.isPlayer - b.isPlayer);
+  for (const r of list) {
+    const [x, y] = mmXY(race.startS + r.p, r.d * 1.6);
+    mctx.beginPath(); mctx.arc(x, y, r.isPlayer ? 8 : 5.5, 0, 7);
+    mctx.fillStyle = WAKU_STR[r.waku]; mctx.fill();
+    mctx.lineWidth = r.isPlayer ? 3 : r.tactic ? 2.5 : 1.2; mctx.strokeStyle = r.isPlayer ? '#ffb21e' : r.tactic ? '#ff5c3d' : 'rgba(0,0,0,.7)'; mctx.stroke();
+  }
+}
+
+// ---------- HUD ----------
+function horseFeeling(r) {
+  const rem = race.D - r.p, ST = STYLES[r.style];
+  if (r.startDelay === Infinity || !r.started) return ['ゲートの中。開く瞬間を待て', 'warn', 'ear'];
+  if (r.finished) return ['ゴール！ よく頑張った', 'good', ''];
+  if (r.sulk) return ['ヘソを曲げた…ムチはもう逆効果', 'bad', '耳を絞っている'];
+  if (r.kakari) return ['掛かっている！ なだめる(X)か、前に馬を置いて', 'bad', '頭を上げ、耳を絞っている'];
+  const fu = race.rivals && race.rivals[2];
+  if (fu && fu.tt.boxing && Math.abs(fu.p - r.p) < 2.6) return [`${fu.jockey}に蓋をされた！ ↓で下げてから ← で外へ`, 'bad', '行き場がない'];
+  if (r.boxed) return ['馬群を怖がっている。外へ出して', 'bad', '耳がせわしなく動く'];
+  if (r.stamina < 12) return ['バテてきた…', 'bad', '耳が垂れている'];
+  if (r.agit > 55) return ['イライラしている。抑えすぎ？', 'warn', '耳を後ろに倒している'];
+  if (rem <= r.zone) {
+    if (r.compete) return ['競り合いで燃えている！', 'good', '耳をぴんと前に'];
+    if (r.eEff < 0.7) return ['もう行ける！ ↑で追い出せ', 'warn', '前を見据えている'];
+    if (r.blocked) return ['前が壁！ 進路を探せ（←→）', 'bad', ''];
+    return ['全力で伸びている！', 'good', '耳をぴんと前に'];
+  }
+  if (r.temper === 'zubui' && r.effort < 0.62) return ['ズブい…促さないと進んでいかない', 'warn', '耳がのんびり左右に'];
+  if (!r.inBand && r.p > 300) {
+    const front = r.rank / (race.N - 1) < ST.band[0];
+    const msg = front ? ST.front : ST.back;
+    if (msg) return [msg, 'warn', '落ち着かない様子'];
+  }
+  if (r.effort > 0.78) return ['飛ばしすぎ。脚を使っている', 'warn', ''];
+  return [r.tame > 92 ? '脚は溜まった。仕掛けどころを待て' : 'リズム良し。脚を溜めている', 'good', '耳が前を向いて集中'];
+}
+
+function rivalState(r, p) {
+  const T = r.tt, dp = p.p - r.p, rk = `${r.rank + 1}番手`;
+  if (r.finished) return [`${r.rank + 1}着でゴール`, ''];
+  if (!r.started) return ['ゲート内', ''];
+  if (T.goUntil && race.t < T.goUntil) return [`${rk}・釣られて動いた！`, 'ok'];
+  if (T.saidFade && r.stamina < 10) return [`${rk}・バテた`, 'ok'];
+  if (r.tactic === 'pace') {
+    if (r.rank === 0) return T.pressedByP ? ['先頭・あなたと競り合い中', 'hot'] : T.slow ? ['先頭・スローに落としている', 'hot'] : ['先頭で逃げている', ''];
+    return [T.gaveUp ? `${rk}で控えた` : `${rk}・ハナを狙っている`, ''];
+  }
+  if (r.tactic === 'mark') {
+    if (dp > 0 && dp < 12) return [`あなたの真後ろ ${dp.toFixed(0)}m（マーク中）`, 'hot'];
+    return [dp < 0 ? `${rk}・あなたの ${(-dp).toFixed(0)}m 前` : `${rk}・あなたを追っている`, ''];
+  }
+  if (r.tactic === 'futa') {
+    if (T.boxing && Math.abs(dp) < 2.6) return ['あなたの外で蓋をしている！', 'hot'];
+    return [p.d < 3.6 && race.D - p.p < race.D * 0.7 ? `${rk}・内のあなたを狙っている` : rk, p.d < 3.6 ? 'hot' : ''];
+  }
+  return [rk, ''];
+}
+function updateHud(dt) {
+  const p = race.player, rem = Math.max(0, race.D - p.p);
+  $('hTime').textContent = fmtTime(Math.max(0, race.t - race.openAt));
+  $('hRemain').textContent = Math.ceil(rem).toLocaleString();
+  $('hRank').innerHTML = `${p.rank + 1}<small>番手</small>`;
+  const bar = (id, nid, v) => { $(id).firstElementChild.style.width = `${v}%`; $(nid).textContent = Math.round(v); };
+  bar('bSta', 'nSta', p.stamina); bar('bTame', 'nTame', p.tame); bar('bMood', 'nMood', p.mood); bar('bAgit', 'nAgit', p.agit);
+  $('bSta').firstElementChild.style.background = p.stamina < 20 ? 'var(--bad)' : p.stamina < 40 ? 'var(--warn)' : 'var(--go)';
+  const [txt, cls, ear] = horseFeeling(p);
+  const f = $('feel'); f.className = cls; f.innerHTML = `${txt}${ear ? `<span class="ear">${ear}</span>` : ''}`;
+  $('reinMark').style.left = `${p.effort * 100}%`;
+  const eff = $('reinEff');
+  if (Math.abs(p.eEff - p.effort) > 0.05 && p.started) { eff.style.display = 'block'; eff.style.left = `${p.eEff * 100}%`; } else eff.style.display = 'none';
+  [...$('whips').children].forEach((w, i) => w.classList.toggle('used', i >= p.whips));
+  [...$('feints').querySelectorAll('i')].forEach((w, i) => w.classList.toggle('used', i >= p.feints));
+  $('rivals').innerHTML = '<div class="rt">要注意騎手</div>' + race.rivals.map(r => {
+    const [txt, cls] = rivalState(r, p);
+    return `<div class="rv"><span class="wk" style="background:${WAKU_CSS[r.waku]};color:${WAKU_TXT[r.waku]}">${r.no}</span>
+      <span><span class="who">${r.jockey}<small>${RIVALS[r.tactic].title}</small></span><br><span class="now ${cls}">${txt}</span></span></div>`;
+  }).join('');
+  $('hSpeed').textContent = (p.v * 3.6).toFixed(1);
+  // 隊列
+  const ord = race.order, lead = ord[0].p, last = ord[ord.length - 1].p, span = Math.max(15, lead - last);
+  for (const el of $('form').children) {
+    const r = race.runners[+el.dataset.no - 1];
+    el.style.left = `${((r.p - last) / span) * 100}%`;
+  }
+  drawMinimap();
+}
+
+function commentary() {
+  const o = race.order, p = race.player, lead = o[0], D = race.D;
+  const remL = D - lead.p;
+  if (!flags.open && race.t >= race.openAt) { flags.open = true; say('スタートしました！'); }
+  if (!flags.late && p.started && p.startDelay >= 0.8 && race.t > race.openAt + 1.3) { flags.late = true; say(`${tag(p)}は出遅れ気味のスタート。`); }
+  if (!flags.hana && lead.p > 280) { flags.hana = true; say(`ハナを切ったのは${tag(lead)}。`); }
+  if (!flags.half && lead.p > D / 2) { flags.half = true; say(`中間点を通過。先頭は${tag(lead)}、${p.name}は${p.rank + 1}番手。`); }
+  if (D >= 1600 && !flags.k1000 && remL < 1000) { flags.k1000 = true; say(`残り1000m。先頭${tag(lead)}、2番手${tag(o[1])}。`); }
+  if (!flags.straight && remL < TRK.FIN) { flags.straight = true; say('4コーナーを回って、最後の直線！'); flash('最後の直線', 'led', `残り${Math.round(D - p.p)}m`); }
+  if (!flags.r200 && remL < 200) { flags.r200 = true; say(`残り200！ ${tag(lead)}先頭、${tag(o[1])}が迫る！`); }
+  if (!flags.meTop && D - p.p < 400 && p.rank === 0 && !p.finished) { flags.meTop = true; say(`${tag(p)}が先頭に立った！`); }
+  if (!flags.whipHint && D - p.p < p.zone && p.whipUsed === 0 && p.eEff < 0.7) { flags.whipHint = true; flash('追い出せ！', 'led', '↑ で促す ／ Space でムチ'); }
+}
+
+// ---------- 更新 ----------
+function stepGame(dt) {
+  const p = race.player;
+  // 入力
+  if (state === 'race' && !p.finished) {
+    if (keys.up) p.effort = Math.min(1, p.effort + 0.6 * dt);
+    if (keys.down) p.effort = Math.max(0, p.effort - 0.6 * dt);
+    p.latInput = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
+    p.soothing = keys.soothe;
+  } else { p.latInput = 0; p.soothing = false; }
+  if (state === 'gate' && race.t >= race.openAt) {
+    state = 'race'; Snd.clang(); $('gatecard').hidden = true; Snd.set('crowd', 0.12, 0.5);
+  }
+  if (state === 'race' && p.startDelay === Infinity && race.t > race.openAt + 0.6) { p.startDelay = 0.75 + (p.temper === 'okubyo' ? 0.15 : 0); flash('スタートでやや遅れた', 'bad'); }
+  const sub = 3, h = dt / sub;
+  for (let i = 0; i < sub; i++) stepRace(race, h);
+  if (state === 'race') commentary();
+  if (race.t >= race.openAt) gateOpenT = Math.min(1, gateOpenT + dt * 3);
+  gateDoors.forEach(dd => { dd.piv.rotation.y = dd.sgn * gateOpenT * 1.45; });
+
+  if (p.finished && state === 'race') {
+    state = 'finish'; finishShownAt = race.t;
+    const place = p.rank + 1;
+    flash(place === 1 ? '1着！' : `${place}着`, place === 1 ? 'led' : place <= 3 ? 'good' : '', `タイム ${fmtTime(p.ft - race.openAt)}`);
+    Snd.set('crowd', place === 1 ? 0.5 : 0.3, 0.2);
+  }
+  if (state === 'finish' && race.t - finishShownAt > 4) showResult();
+}
+
+function updateVisuals(dt, now) {
+  const p = race.player;
+  for (const [r, m] of models) {
+    const tp = trackPos(race.startS + r.p - VIS, r.d);
+    m.g.position.set(tp.x, 0, tp.z);
+    m.g.rotation.y = Math.PI / 2 - tp.h;
+    animateHorse(m, r);
+  }
+  // 一人称
+  const tp = trackPos(race.startS + p.p - VIS, p.d);
+  fp.rig.position.set(tp.x, 0, tp.z);
+  fp.rig.rotation.y = Math.PI / 2 - tp.h;
+  const ph = p.stride * Math.PI * 2, amp = Math.min(1, p.v / 8), reduce = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.35 : 1;
+  fp.bob.position.y = Math.sin(ph) * 0.045 * amp * reduce;
+  fp.bob.rotation.x = Math.sin(ph + 0.8) * 0.03 * amp * reduce;
+  fp.head.rotation.x = 0.5 + (p.kakari ? -0.4 : 0) + Math.sin(ph + 1.2) * 0.06 * amp;
+  // 耳：集中＝前、イライラ＝後ろ、バテ＝垂れる
+  const back = clamp((p.agit - 25) / 55, 0, 1) + (p.sulk ? 0.6 : 0);
+  // 頭の傾き(0.5rad)を打ち消して、前向き＝やや前傾、絞る＝後ろに寝かせる
+  let earX = -0.3 - back * 1.2;
+  if (p.stamina < 12) earX = -0.9;
+  const flick = p.boxed || p.temper === 'kimagure' && p.mood < 45 ? Math.sin(now * 0.009) * 0.5 : 0;
+  fp.earL.rotation.x += ((earX + flick) - fp.earL.rotation.x) * Math.min(1, dt * 6);
+  fp.earR.rotation.x += ((earX - flick * 0.7) - fp.earR.rotation.x) * Math.min(1, dt * 6);
+  fp.earL.rotation.z = 0.12 + (p.stamina < 12 ? 0.6 : 0); fp.earR.rotation.z = -0.12 - (p.stamina < 12 ? 0.6 : 0);
+  fp.updateReins(1 - p.effort);
+  whipAnim = Math.max(0, whipAnim - dt * 3.2);
+  fp.whipPiv.rotation.x = -Math.sin(whipAnim * Math.PI) * 1.4;
+  fp.whipPiv.rotation.z = Math.sin(whipAnim * Math.PI) * 0.5;
+  // カメラ
+  lookBack += ((keys.back ? 1 : 0) - lookBack) * Math.min(1, dt * 7);
+  fpCam.position.set(0, 2.45 + Math.sin(ph + 0.3) * 0.05 * amp * reduce, 0.12);
+  fpCam.rotation.set(-0.12 + (lookBack > 0.5 ? 0.1 : 0), Math.PI + lookBack * 2.6, Math.sin(ph) * 0.007 * amp * reduce);
+  const targetFov = 70 + Math.max(0, p.v - 15) * 1.8 + (p.whipBoost > 0.3 ? 2 : 0);
+  fpCam.fov += (targetFov - fpCam.fov) * Math.min(1, dt * 2); fpCam.updateProjectionMatrix();
+  sky.position.copy(fp.rig.position);
+  // 音
+  if (Snd.ctx && !paused) {
+    if (p.v > 1) {
+      const fr = p.stride, beats = [0, 0.14, 0.34, 0.46];
+      for (const b of beats) { if ((lastPhase < b && fr >= b) || (lastPhase > fr && b <= fr)) Snd.hoof(0.35 + amp * 0.3); }
+    }
+    lastPhase = p.stride;
+    Snd.set('wind', Math.min(0.22, p.v / 80));
+    let near = 0; for (const o of race.runners) if (o !== p && Math.abs(o.p - p.p) < 15) near++;
+    Snd.set('rumble', Math.min(0.5, near * 0.07 * amp + 0.02));
+    if (state === 'race') { const rem = race.D - race.order[0].p; Snd.set('crowd', rem < TRK.FIN ? 0.14 + (1 - rem / TRK.FIN) * 0.3 : 0.08, 0.6); }
+  }
+}
+
+// ---------- 結果 ----------
+function margin(dt, v) {
+  const L = dt * v / 2.4;
+  const T = [[0.08, 'ハナ'], [0.2, 'アタマ'], [0.35, 'クビ'], [0.6, '1/2'], [0.85, '3/4'], [1.1, '1'], [1.35, '1 1/4'], [1.6, '1 1/2'], [1.85, '1 3/4'], [2.25, '2'], [2.75, '2 1/2'], [3.25, '3'], [3.75, '3 1/2'], [4.5, '4'], [5.5, '5'], [6.5, '6'], [7.5, '7'], [8.5, '8'], [9.5, '9'], [10.5, '10']];
+  for (const [th, s] of T) if (L < th) return s;
+  return '大差';
+}
+function showResult() {
+  // 残りの馬を早送りでゴールさせる
+  let guard = 0;
+  while (race.runners.some(r => !r.finished) && guard++ < 40000) stepRace(race, 1 / 30);
+  state = 'result';
+  Snd.set('crowd', 0.06, 1.5); Snd.set('wind', 0, 0.5); Snd.set('rumble', 0, 0.5);
+  const fin = race.runners.slice().sort((a, b) => a.ft - b.ft), p = race.player, place = fin.indexOf(p) + 1;
+  const t0 = race.openAt;
+  let rows = '<tr><th>着</th><th>枠番</th><th>馬名</th><th>タイム</th><th>着差</th><th>上がり3F</th><th>脚質</th></tr>';
+  fin.forEach((r, i) => {
+    const mg = i === 0 ? '' : margin(r.ft - fin[i - 1].ft, r.v || 16);
+    const up = r.t600 != null ? (r.ft - r.t600).toFixed(1) : '-';
+    rows += `<tr class="${r.isPlayer ? 'me' : ''}"><td class="l">${i + 1}</td><td><span class="wk" style="background:${WAKU_CSS[r.waku]};color:${WAKU_TXT[r.waku]}">${r.no}</span></td>
+      <td class="nm">${r.name}${r.isPlayer ? '（あなた）' : ''}${r.tactic ? `<small>${r.jockey}</small>` : ''}</td><td class="l">${fmtTime(r.ft - t0)}</td><td>${mg}</td><td>${up}</td><td>${STYLES[r.style].label}</td></tr>`;
+  });
+  $('resTable').innerHTML = rows;
+  const photo = fin[1].ft - fin[0].ft < 0.05;
+  $('resTitle').innerHTML = `${race.course.name} 確定${photo ? '<span class="photo">写真判定</span>' : ''}`;
+  $('resMeta').textContent = `芝${race.D}m 馬場:${race.ground.label}${race.pace ? ` ／ ${race.pace.label}` : ''}`;
+
+  // 騎乗評価
+  const S = p.st;
+  const bandPct = S.tPre > 0 ? S.tBand / S.tPre : 1;
+  const moodAvg = S.moodT > 0 ? S.moodSum / S.moodT : 50;
+  const finSta = p.finishStamina ?? 0;
+  // 駆け引きの振り返り
+  const [pc, mk, fu] = race.rivals, placeOf = r => fin.indexOf(r) + 1;
+  if (S.pressT > 6) {
+    if (placeOf(pc) > 4 && place < placeOf(pc)) logOnce(race, 'pressWin', true, `${pc.jockey}に${Math.round(S.pressT)}秒競りかけて、逃げ馬を潰した`);
+    else if (place > placeOf(pc)) logOnce(race, 'pressLose', false, `${pc.jockey}とのハナ争いで脚を使わされた`);
+  }
+  if (race.pace && race.pace.kind === 'slow' && placeOf(pc) <= 3 && placeOf(pc) < place) logOnce(race, 'slow', false, `${pc.jockey}のスローペースにはまり、前に残られた`);
+  if (S.markT > 15) {
+    if (placeOf(mk) < place) logOnce(race, 'markLose', false, `${mk.jockey}に${Math.round(S.markT)}秒マークされ、風よけにされて差された`);
+    else logOnce(race, 'markWin', true, `${mk.jockey}のマークを振り切った`);
+  }
+  if (S.futaT > 5) logOnce(race, 'futa', false, `${fu.jockey}に${Math.round(S.futaT)}秒間、蓋をされた`);
+  else if (fu.tt.boxCount && S.futaT <= 2) logOnce(race, 'futaEsc', true, `${fu.jockey}の蓋をかわした`);
+  S.boxedNames.slice(0, 2).forEach(o => logOnce(race, 'box' + o.no, true, `${tag(o)}の外に並んで蓋をした`));
+  const tacGood = race.tlog.filter(x => x.good).length, tacBad = race.tlog.length - tacGood;
+  const tacPts = clamp(tacGood * 3 - tacBad * 3, -9, 9);
+  const placePts = [40, 30, 24, 18, 14, 10, 8, 6, 4, 2][place - 1] || 0;
+  let staPts = finSta <= 15 ? 10 : finSta <= 35 ? 6 : 2;
+  if (S.emptyAt !== null && S.emptyAt > 100) staPts = 0;
+  let score = tacPts + placePts + bandPct * 20 + moodAvg / 100 * 20 + staPts + 10 - Math.min(10, S.tKakari) - S.badWhips * 3 - (p.sulk ? 5 : 0);
+  score = clamp(Math.round(score), 0, 100);
+  const G = score >= 85 ? 'S' : score >= 70 ? 'A' : score >= 55 ? 'B' : score >= 40 ? 'C' : 'D';
+  const words = { S: '完璧な騎乗', A: '見事な手綱さばき', B: 'まずまずの騎乗', C: '課題の残る騎乗', D: '馬と喧嘩した' };
+  const adv = [];
+  const ST = STYLES[p.style];
+  if (S.tKakari > 4) adv.push(p.temper === 'kakari' ? `${Math.round(S.tKakari)}秒間掛かっていました。この馬は抑えすぎると掛かります。先頭に立たせるか、前に馬を置いて壁を作りましょう。` : `${Math.round(S.tKakari)}秒間掛かっていました。X でなだめるか、他馬の後ろに入れて落ち着かせましょう。`);
+  if (bandPct < 0.5) adv.push(`${ST.label}の馬なのに、理想の位置（${ST.where}）にいたのは道中の${Math.round(bandPct * 100)}%だけ。脚質に合った位置で運ぶとリズムが良くなり、溜めも増えます。`);
+  if (S.emptyAt !== null && S.emptyAt > 60) adv.push(`残り${Math.round(S.emptyAt)}mでスタミナが尽きました。仕掛けを遅らせるか、道中もう少し抑えて。`);
+  else if (finSta > 35) adv.push(`スタミナを${Math.round(finSta)}%も残してゴール。もっと早めに追い出せたはずです。`);
+  if (S.tameAtSpurt !== null && S.tameAtSpurt < 50) adv.push(`追い出した時点の溜めが${Math.round(S.tameAtSpurt)}%。道中は手綱を「折り合い」以下にして我慢させると末脚が伸びます。`);
+  if (S.wideLoss > 14) adv.push(`コーナーで外を回って約${Math.round(S.wideLoss)}m（${(S.wideLoss / 2.4).toFixed(1)}馬身）のロス。${p.temper === 'okubyo' ? '臆病な馬なので多少は仕方ありませんが、' : ''}コーナーでは内ラチ沿いを。`);
+  if (S.badWhips > 0) adv.push(`残り600mより前のムチが${S.badWhips}発。効果は薄く、馬の機嫌を損ねます。`);
+  if (p.sulk) adv.push(`ムチの打ちすぎで${p.name}がヘソを曲げました。気分屋にはムチ2発まで。`);
+  if (S.blockedSpurt > 3) adv.push(`直線で前が壁になっていた時間が${S.blockedSpurt.toFixed(1)}秒。直線の入口で早めに進路を確保しましょう。`);
+  if (p.temper === 'okubyo' && S.tBoxed > 8) adv.push(`馬群に包まれていた時間が${Math.round(S.tBoxed)}秒。シラユキヒメは外めを回すと気分よく走ります。`);
+  if (p.temper === 'makezu' && place > 1 && !adv.length) adv.push('直線では他馬と馬体を併せると、負けず嫌いに火がついてもうひと伸びします。');
+  if (p.whipUsed === 0 && place > 1) adv.push('ムチを1発も使っていません。直線のここぞという場面で使いましょう。');
+  if (!adv.length) adv.push(`${p.name}の個性を完璧に引き出しました。人馬一体の騎乗です。`);
+  // 記録
+  const recs = store.get(), key = `${p.def.id}_${race.D}`, prev = recs[key];
+  const myTime = p.ft - t0;
+  let newRec = false;
+  if (!prev || place < prev.place || (place === prev.place && myTime < prev.time)) { recs[key] = { place, time: myTime, grade: G }; newRec = !!prev || true; store.set(recs); }
+  const row = (lab, v, pct) => `<span>${lab}</span><div class="bar"><i style="width:${clamp(pct, 0, 100)}%"></i></div><span class="v">${v}</span>`;
+  $('evalBox').innerHTML = `
+    <div class="grade"><div class="g">${G}</div><div class="gt"><b>${place}着 ／ ${words[G]}</b>${tag(p)}・${ST.label}・${TEMPERS[p.temper].label}<br>騎乗スコア ${score}点</div></div>
+    ${newRec ? `<div class="newrec">このコースの自己ベストを更新</div>` : ''}
+    <div class="ev-rows">
+      ${row('脚質の活用', Math.round(bandPct * 100) + '%', bandPct * 100)}
+      ${row('人馬一体', Math.round(moodAvg), moodAvg)}
+      ${row('ゴール時スタミナ', Math.round(finSta) + '%', finSta)}
+      ${row('掛かった時間', S.tKakari.toFixed(1) + '秒', S.tKakari * 5)}
+      ${row('ムチ', `${p.whipUsed}/${p.whipsMax}`, p.whipUsed / p.whipsMax * 100)}
+    </div>
+    <div class="ev-h">駆け引き${race.pace ? `　／　前半${race.pace.splitD}m ${race.pace.time.toFixed(1)}秒（${race.pace.label}）` : ''}</div>
+    <ul class="tac">${race.tlog.length ? race.tlog.map(x => `<li class="${x.good ? 'good' : 'bad'}">${x.text}</li>`).join('') : '<li class="bad">目立った駆け引きなし。F の「仕掛けるフリ」や、外に並んで蓋をする手もある</li>'}</ul>
+    <div class="ev-h">騎乗アドバイス</div>
+    <ul class="advice">${adv.slice(0, 4).map(a => `<li class="${adv.length === 1 && a.includes('完璧') ? 'good' : ''}">${a}</li>`).join('')}</ul>
+    <div class="res-actions">
+      <button class="btn pri" id="againBtn" type="button">同じ条件でもう一度</button>
+      <button class="btn" id="menuBtn" type="button">馬・レースを選び直す</button>
+    </div>`;
+  $('againBtn').onclick = () => { $('result').hidden = true; startRace(); };
+  $('menuBtn').onclick = toMenu;
+  $('hud').hidden = true; $('result').hidden = false;
+}
+
+function toMenu() {
+  state = 'menu'; race = null; Snd.stopAll();
+  models.forEach(m => scene.remove(m.g)); models.clear();
+  if (gateGroup) { scene.remove(gateGroup); gateGroup = null; }
+  $('hud').hidden = true; $('result').hidden = true; $('menu').hidden = false;
+  renderMenu();
+}
+
+// ---------- メニュー ----------
+function aptMark(h, D) {
+  const [a, b] = h.apt;
+  if (D >= a && D <= b) return '◎';
+  const off = D < a ? a - D : D - b;
+  return off <= 400 ? '○' : off <= 800 ? '△' : '×';
+}
+function renderMenu() {
+  const course = COURSES.find(c => c.id === sel.course);
+  $('courseList').innerHTML = COURSES.map(c => `<button class="course" type="button" data-id="${c.id}" aria-pressed="${c.id === sel.course}">
+    <span class="dist">${c.D}<small>${c.cat}</small></span><span class="cname">${c.name}<span class="g">${c.grade}</span></span><span class="cnote">${c.note}</span></button>`).join('');
+  const recs = store.get();
+  $('horseList').innerHTML = PLAYER_HORSES.map((h, i) => {
+    const w = i + 1 <= 8 ? i + 2 : 8;
+    const stat = (lab, v) => `<span>${lab}</span><div class="bar"><i style="width:${v}%"></i></div><span class="gr">${grade(v)}</span>`;
+    const lo = 1000, hi = 3600, pct = v => ((v - lo) / (hi - lo)) * 100;
+    const rec = recs[`${h.id}_${course.D}`];
+    return `<button class="hrow" type="button" data-id="${h.id}" aria-pressed="${h.id === sel.horse}" style="--c:${WAKU_STR[w]}">
+      <span class="stripe"></span>
+      <span class="in">
+        <span>
+          <span class="hname"><span class="coat" style="--c:${h.coatCss}"></span><b>${h.name}</b><span class="chip st">${STYLES[h.style].label}</span><span class="chip tp">${TEMPERS[h.temper].label}</span><span class="mark" title="この距離への適性">${aptMark(h, course.D)}</span></span>
+          <p class="comment">${h.comment}</p>
+        </span>
+        <span class="stats">
+          ${stat('スピード', h.spd)}${stat('スタミナ', h.sta)}${stat('瞬発力', h.pow)}${stat('根性', h.guts)}
+          <span class="apt"><span class="apt-lab"><span>距離適性 ${h.apt[0]}〜${h.apt[1]}m</span><span>${course.D}m</span></span>
+            <span class="apt-track" style="display:block"><span class="apt-range" style="left:${pct(h.apt[0])}%;width:${pct(h.apt[1]) - pct(h.apt[0])}%"></span><span class="apt-now" style="left:${pct(course.D)}%"></span></span>
+            <span class="rec" style="display:block">${rec ? `このレースの最高：${rec.place}着 ${fmtTime(rec.time)}（評価${rec.grade}）` : ''}</span></span>
+        </span>
+      </span></button>`;
+  }).join('');
+  const seg = (id, obj, key) => { $(id).innerHTML = Object.entries(obj).map(([k, v]) => `<button type="button" data-k="${k}" aria-pressed="${sel[key] === k}">${v.label}<small>${v.sub}</small></button>`).join(''); };
+  seg('diffSeg', DIFFS, 'diff'); seg('groundSeg', GROUNDS, 'ground');
+  const h = PLAYER_HORSES.find(x => x.id === sel.horse);
+  $('startSub').textContent = `${course.name} 芝${course.D}m ／ ${h.name}`;
+}
+$('courseList').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) { sel.course = b.dataset.id; renderMenu(); } });
+$('horseList').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) { sel.horse = b.dataset.id; renderMenu(); } });
+$('diffSeg').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) { sel.diff = b.dataset.k; renderMenu(); } });
+$('groundSeg').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) { sel.ground = b.dataset.k; renderMenu(); } });
+$('startBtn').addEventListener('click', startRace);
+
+// ---------- ループ ----------
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  fpCam.aspect = menuCam.aspect = w / h;
+  fpCam.updateProjectionMatrix(); menuCam.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+let last = performance.now(), menuA = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (state === 'menu' || !race) {
+    menuA += dt * 0.04;
+    menuCam.position.set(Math.cos(menuA) * 620, 120, Math.sin(menuA) * 420 - 60);
+    menuCam.lookAt(0, 0, -40);
+    sky.position.copy(menuCam.position);
+    renderer.render(scene, menuCam);
+    return;
+  }
+  if (!paused && state !== 'result') {
+    stepGame(dt);
+    updateVisuals(dt, now);
+    placeBubbles(now);
+    hudT -= dt;
+    if (hudT <= 0) { hudT = 0.066; updateHud(); }
+    tickerT -= dt;
+    if (tickerT <= 0) { const n = tickerQ.shift(); $('ticker').textContent = n || ''; tickerT = n ? 3 : 0.3; }
+    if (alertT > 0) { alertT -= dt; if (alertT <= 0) $('alert').classList.remove('show'); }
+  }
+  renderer.render(scene, fpCam);
+}
+renderMenu();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
